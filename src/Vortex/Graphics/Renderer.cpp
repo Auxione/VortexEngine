@@ -10,7 +10,7 @@ namespace Vortex::Graphics {
 		  StandardProgram{} {
 
 		CreateStandardProgram();
-		CreateStandardTexture();
+		CreateStandardTextures();
 	}
 
 	Renderer::~Renderer() {
@@ -27,7 +27,7 @@ namespace Vortex::Graphics {
 		m_RenderBackend->Destroy(StandardWhiteTexture);
 	}
 
-	void Renderer::CreateStandardProgram() {
+	void Renderer::CreateStandardAssets() {
 		char vertex_shader_source[]{
 			R"(
 #version 450 core
@@ -74,9 +74,7 @@ void main() {
 		StandardProgram = m_RenderBackend->CreateProgram(handle, 2, true);
 		m_RenderBackend->SetShaderInt1(StandardProgram, "Diffuse", 0);
 		m_RenderBackend->SetShaderInt1(StandardProgram, "Mask", 1);
-	}
 
-	void Renderer::CreateStandardTexture() {
 		UInt8 white_texture[]{
 			255, 255, 255, 255
 			, 255, 255, 255, 255
@@ -84,7 +82,18 @@ void main() {
 			, 255, 255, 255, 255
 		};
 		StandardWhiteTexture = m_RenderBackend->CreateTexture2D(2, 2, PixelFormat::RGBA_UI8, white_texture);
+
+		UInt8 error_texture[]{
+			255, 0, 255
+			, 0, 0, 0
+			, 0, 0, 0
+			, 255, 0, 255
+		};
+		StandardErrorTexture = m_RenderBackend->CreateTexture2D(2, 2, PixelFormat::RGB_UI8, error_texture);
+
+		StandardMaterial = CreateMaterial(StandardProgram, StandardWhiteTexture, StandardWhiteTexture);
 	}
+
 	MeshHandle Renderer::CreateMesh(Topology::Enum topology, SizeType vertex_count, SizeType index_count) {
 		VORTEX_ASSERT(m_RenderBackend != nullptr)
 

@@ -198,12 +198,14 @@ namespace Vortex::Graphics {
 		void Process();
 
 	private:
-		void CreateStandardProgram();
-		void CreateStandardTexture();
+		void CreateStandardAssets();
 
 	public:
 		ProgramHandle StandardProgram;
 		TextureHandle StandardWhiteTexture;
+		TextureHandle StandardErrorTexture;
+
+		MaterialHandle StandardMaterial;
 
 	protected:
 		Vector<DrawCommand> m_DrawCommands;
