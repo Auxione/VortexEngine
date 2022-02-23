@@ -6,7 +6,11 @@ namespace Vortex::Graphics {
 		: m_NextMeshHandle{0},
 		  m_NextMaterialHandle{0},
 		  m_NextViewHandle{0},
-		  m_RenderBackend{render_backend} {
+		  m_RenderBackend{render_backend},
+		  StandardProgram{} {
+
+		CreateStandardProgram();
+		CreateStandardTexture();
 	}
 
 	Renderer::~Renderer() {
@@ -15,13 +19,72 @@ namespace Vortex::Graphics {
 			const auto& mesh_data = node.second;
 			m_RenderBackend->Destroy(mesh_data.IndexBuffer);
 			m_RenderBackend->Destroy(mesh_data.PositionBuffer);
-			m_RenderBackend->Destroy(mesh_data.NormalBuffer);
 			m_RenderBackend->Destroy(mesh_data.UVBuffer);
 			m_RenderBackend->Destroy(mesh_data.ColorBuffer);
 			m_RenderBackend->Destroy(mesh_data.VertexArray);
 		}
+		m_RenderBackend->Destroy(StandardProgram);
+		m_RenderBackend->Destroy(StandardWhiteTexture);
 	}
 
+	void Renderer::CreateStandardProgram() {
+		char vertex_shader_source[]{
+			R"(
+#version 450 core
+
+layout(location = 0) in vec3 a_position;
+layout(location = 1) in vec4 a_color;
+layout(location = 2) in vec2 a_uv;
+
+out vec4 vertex_color;
+out vec2 vertex_uv;
+
+uniform mat4 Mat4_Projection;
+uniform mat4 Mat4_View;
+uniform mat4 Mat4_Model;
+
+void main(){
+	vertex_color = a_color;
+	vertex_uv = a_uv;
+	gl_Position = Mat4_Projection * Mat4_View * Mat4_Model * vec4(a_position, 1.0f);
+}
+			)"
+		};
+
+		char fragment_shader_source[]{
+			R"(
+#version 450 core
+
+uniform sampler2D Diffuse;
+uniform sampler2D Mask;
+
+in vec4 vertex_color;
+in vec2 vertex_uv;
+
+void main() {
+  gl_FragColor = vertex_color * texture2D(Diffuse, vertex_uv) * texture2D(Mask, vertex_uv);
+}
+			)"
+		};
+
+		Vortex::Graphics::ShaderHandle handle[2];
+		handle[0] = m_RenderBackend->CreateShader(Vortex::Graphics::ShaderType::Vertex, vertex_shader_source);
+		handle[1] = m_RenderBackend->CreateShader(Vortex::Graphics::ShaderType::Fragment, fragment_shader_source);
+
+		StandardProgram = m_RenderBackend->CreateProgram(handle, 2, true);
+		m_RenderBackend->SetShaderInt1(StandardProgram, "Diffuse", 0);
+		m_RenderBackend->SetShaderInt1(StandardProgram, "Mask", 1);
+	}
+
+	void Renderer::CreateStandardTexture() {
+		UInt8 white_texture[]{
+			255, 255, 255, 255
+			, 255, 255, 255, 255
+			, 255, 255, 255, 255
+			, 255, 255, 255, 255
+		};
+		StandardWhiteTexture = m_RenderBackend->CreateTexture2D(2, 2, PixelFormat::RGBA_UI8, white_texture);
+	}
 	MeshHandle Renderer::CreateMesh(Topology::Enum topology, SizeType vertex_count, SizeType index_count) {
 		VORTEX_ASSERT(m_RenderBackend != nullptr)
 
@@ -29,13 +92,11 @@ namespace Vortex::Graphics {
 		auto index_buffer = m_RenderBackend->CreateBuffer(BufferUsage::DynamicDraw, {RenderElementType::UInt1}, index_count, nullptr);
 
 		auto position_buffer = m_RenderBackend->CreateBuffer(BufferUsage::DynamicDraw, {RenderElementType::Float3}, vertex_count * 3, nullptr);
-		auto normal_buffer = m_RenderBackend->CreateBuffer(BufferUsage::DynamicDraw, {RenderElementType::Float3}, vertex_count * 3, nullptr);
 		auto color_buffer = m_RenderBackend->CreateBuffer(BufferUsage::DynamicDraw, {RenderElementType::Float4}, vertex_count * 4, nullptr);
 		auto uv_buffer = m_RenderBackend->CreateBuffer(BufferUsage::DynamicDraw, {RenderElementType::Float2}, vertex_count * 2, nullptr);
 
 		m_RenderBackend->SetIndexBuffer(vertex_array, index_buffer);
 		m_RenderBackend->AddVertexBuffer(vertex_array, position_buffer);
-		m_RenderBackend->AddVertexBuffer(vertex_array, normal_buffer);
 		m_RenderBackend->AddVertexBuffer(vertex_array, color_buffer);
 		m_RenderBackend->AddVertexBuffer(vertex_array, uv_buffer);
 
@@ -45,7 +106,6 @@ namespace Vortex::Graphics {
 			vertex_array
 			, index_buffer
 			, position_buffer
-			, normal_buffer
 			, color_buffer
 			, uv_buffer
 			, index_count
@@ -61,7 +121,6 @@ namespace Vortex::Graphics {
 
 		m_RenderBackend->Destroy(mesh_data.IndexBuffer);
 		m_RenderBackend->Destroy(mesh_data.PositionBuffer);
-		m_RenderBackend->Destroy(mesh_data.NormalBuffer);
 		m_RenderBackend->Destroy(mesh_data.UVBuffer);
 		m_RenderBackend->Destroy(mesh_data.ColorBuffer);
 		m_RenderBackend->Destroy(mesh_data.VertexArray);
@@ -81,12 +140,6 @@ namespace Vortex::Graphics {
 		VORTEX_ASSERT(IsValid(handle))
 		const auto& mesh_data = m_MeshDatas.at(handle);
 		m_RenderBackend->UpdateBuffer(mesh_data.PositionBuffer, 0, count * sizeof(float) * 3, data);
-	}
-	void Renderer::SetNormals(MeshHandle handle, const float* data, SizeType count) {
-		VORTEX_ASSERT(m_RenderBackend != nullptr)
-		VORTEX_ASSERT(IsValid(handle))
-		const auto& mesh_data = m_MeshDatas.at(handle);
-		m_RenderBackend->UpdateBuffer(mesh_data.NormalBuffer, 0, count * sizeof(float) * 3, data);
 	}
 	void Renderer::SetColors(MeshHandle handle, const float* data, SizeType count) {
 		VORTEX_ASSERT(m_RenderBackend != nullptr)

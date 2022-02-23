@@ -25,7 +25,6 @@ namespace Vortex::Graphics {
 		BufferHandle IndexBuffer;
 
 		BufferHandle PositionBuffer;
-		BufferHandle NormalBuffer;
 		BufferHandle ColorBuffer;
 		BufferHandle UVBuffer;
 
@@ -141,7 +140,6 @@ namespace Vortex::Graphics {
 
 		void SetIndices(MeshHandle handle, const UInt32* data, SizeType count);
 		void SetPositions(MeshHandle handle, const float* data, SizeType count);
-		void SetNormals(MeshHandle handle, const float* data, SizeType count);
 		void SetColors(MeshHandle handle, const float* data, SizeType count);
 		void SetUVs(MeshHandle handle, const float* data, SizeType count);
 
@@ -198,6 +196,14 @@ namespace Vortex::Graphics {
 		}
 
 		void Process();
+
+	private:
+		void CreateStandardProgram();
+		void CreateStandardTexture();
+
+	public:
+		ProgramHandle StandardProgram;
+		TextureHandle StandardWhiteTexture;
 
 	protected:
 		Vector<DrawCommand> m_DrawCommands;
