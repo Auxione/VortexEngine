@@ -19,7 +19,7 @@ namespace Vortex {
 		};
 	}
 
-	void InitGraphicsBackend(GraphicsBackendType::Enum graphics, Int32* rect, const char* title);
+	void InitGraphicsBackend(GraphicsBackendType::Enum graphics, const Int32* resolution, const char* title);
 	Graphics::WindowBackend* GetWindowBackend();
 	Graphics::RenderBackend* GetRenderBackend();
 	Graphics::Renderer* GetRenderer();
