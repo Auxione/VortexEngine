@@ -9,8 +9,7 @@ namespace Vortex::Graphics {
 		  m_RenderBackend{render_backend},
 		  StandardProgram{} {
 
-		CreateStandardProgram();
-		CreateStandardTextures();
+		CreateStandardAssets();
 	}
 
 	Renderer::~Renderer() {
@@ -23,8 +22,15 @@ namespace Vortex::Graphics {
 			m_RenderBackend->Destroy(mesh_data.ColorBuffer);
 			m_RenderBackend->Destroy(mesh_data.VertexArray);
 		}
+		for (const auto& node : m_MaterialDatas) {
+			const auto& mat_data = node.second;
+			m_RenderBackend->Destroy(mat_data.Diffuse);
+			m_RenderBackend->Destroy(mat_data.Mask);
+			m_RenderBackend->Destroy(mat_data.Program);
+		}
 		m_RenderBackend->Destroy(StandardProgram);
 		m_RenderBackend->Destroy(StandardWhiteTexture);
+		m_RenderBackend->Destroy(StandardErrorTexture);
 	}
 
 	void Renderer::CreateStandardAssets() {
