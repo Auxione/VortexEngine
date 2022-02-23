@@ -3,11 +3,11 @@
 
 namespace Vortex::Graphics {
 	Renderer::Renderer(RenderBackend* render_backend, const Int32* resolution)
-		: m_NextMeshHandle{0},
-		  m_NextMaterialHandle{0},
-		  m_NextViewHandle{0},
-		  m_RenderBackend{render_backend},
-		  StandardProgram{} {
+	: m_NextMeshHandle{0},
+	m_NextMaterialHandle{0},
+	m_NextViewHandle{0},
+	m_RenderBackend{render_backend},
+	StandardProgram{} {
 
 		CreateStandardAssets(resolution);
 	}
@@ -18,15 +18,10 @@ namespace Vortex::Graphics {
 			const auto& mesh_data = node.second;
 			m_RenderBackend->Destroy(mesh_data.IndexBuffer);
 			m_RenderBackend->Destroy(mesh_data.PositionBuffer);
-			m_RenderBackend->Destroy(mesh_data.UVBuffer);
+			m_RenderBackend->Destroy(mesh_data.UV0Buffer);
+			m_RenderBackend->Destroy(mesh_data.UV1Buffer);
 			m_RenderBackend->Destroy(mesh_data.ColorBuffer);
 			m_RenderBackend->Destroy(mesh_data.VertexArray);
-		}
-		for (const auto& node : m_MaterialDatas) {
-			const auto& mat_data = node.second;
-			m_RenderBackend->Destroy(mat_data.Diffuse);
-			m_RenderBackend->Destroy(mat_data.Mask);
-			m_RenderBackend->Destroy(mat_data.Program);
 		}
 		m_RenderBackend->Destroy(StandardProgram);
 		m_RenderBackend->Destroy(StandardWhiteTexture);
@@ -40,10 +35,12 @@ namespace Vortex::Graphics {
 
 layout(location = 0) in vec3 a_position;
 layout(location = 1) in vec4 a_color;
-layout(location = 2) in vec2 a_uv;
+layout(location = 2) in vec2 a_uv0;
+layout(location = 3) in vec2 a_uv1;
 
 out vec4 vertex_color;
-out vec2 vertex_uv;
+out vec2 vertex_uv0;
+out vec2 vertex_uv1;
 
 uniform mat4 Mat4_Projection;
 uniform mat4 Mat4_View;
@@ -51,7 +48,8 @@ uniform mat4 Mat4_Model;
 
 void main(){
 	vertex_color = a_color;
-	vertex_uv = a_uv;
+	vertex_uv0 = a_uv0;
+	vertex_uv1 = a_uv1;
 	gl_Position = Mat4_Projection * Mat4_View * Mat4_Model * vec4(a_position, 1.0f);
 }
 			)"
@@ -61,14 +59,18 @@ void main(){
 			R"(
 #version 450 core
 
-uniform sampler2D Diffuse;
-uniform sampler2D Mask;
+uniform sampler2D Texture0;
+uniform sampler2D Texture1;
 
 in vec4 vertex_color;
-in vec2 vertex_uv;
+in vec2 vertex_uv0;
+in vec2 vertex_uv1;
 
 void main() {
-  gl_FragColor = vertex_color * texture2D(Diffuse, vertex_uv) * texture2D(Mask, vertex_uv);
+	vec4 tex0_color = texture2D(Texture0, vertex_uv0);
+	vec4 tex1_color = texture2D(Texture1, vertex_uv1);
+
+	gl_FragColor = vertex_color * tex0_color * tex1_color;
 }
 			)"
 		};
@@ -78,8 +80,8 @@ void main() {
 		handle[1] = m_RenderBackend->CreateShader(Vortex::Graphics::ShaderType::Fragment, fragment_shader_source);
 
 		StandardProgram = m_RenderBackend->CreateProgram(handle, 2, true);
-		m_RenderBackend->SetShaderInt1(StandardProgram, "Diffuse", 0);
-		m_RenderBackend->SetShaderInt1(StandardProgram, "Mask", 1);
+		m_RenderBackend->SetShaderInt1(StandardProgram, "Texture0", 0);
+		m_RenderBackend->SetShaderInt1(StandardProgram, "Texture1", 1);
 
 		UInt8 white_texture[]{
 			255, 255, 255, 255
@@ -145,12 +147,14 @@ void main() {
 
 		auto position_buffer = m_RenderBackend->CreateBuffer(BufferUsage::DynamicDraw, {RenderElementType::Float3}, vertex_count * 3, nullptr);
 		auto color_buffer = m_RenderBackend->CreateBuffer(BufferUsage::DynamicDraw, {RenderElementType::Float4}, vertex_count * 4, nullptr);
-		auto uv_buffer = m_RenderBackend->CreateBuffer(BufferUsage::DynamicDraw, {RenderElementType::Float2}, vertex_count * 2, nullptr);
+		auto uv0_buffer = m_RenderBackend->CreateBuffer(BufferUsage::DynamicDraw, {RenderElementType::Float2}, vertex_count * 2, nullptr);
+		auto uv1_buffer = m_RenderBackend->CreateBuffer(BufferUsage::DynamicDraw, {RenderElementType::Float2}, vertex_count * 2, nullptr);
 
 		m_RenderBackend->SetIndexBuffer(vertex_array, index_buffer);
 		m_RenderBackend->AddVertexBuffer(vertex_array, position_buffer);
 		m_RenderBackend->AddVertexBuffer(vertex_array, color_buffer);
-		m_RenderBackend->AddVertexBuffer(vertex_array, uv_buffer);
+		m_RenderBackend->AddVertexBuffer(vertex_array, uv0_buffer);
+		m_RenderBackend->AddVertexBuffer(vertex_array, uv1_buffer);
 
 		MeshHandle handle{m_NextMeshHandle};
 		++m_NextMeshHandle;
@@ -159,7 +163,8 @@ void main() {
 			, index_buffer
 			, position_buffer
 			, color_buffer
-			, uv_buffer
+			, uv0_buffer
+			, uv1_buffer
 			, index_count
 		};
 
@@ -173,7 +178,8 @@ void main() {
 
 		m_RenderBackend->Destroy(mesh_data.IndexBuffer);
 		m_RenderBackend->Destroy(mesh_data.PositionBuffer);
-		m_RenderBackend->Destroy(mesh_data.UVBuffer);
+		m_RenderBackend->Destroy(mesh_data.UV0Buffer);
+		m_RenderBackend->Destroy(mesh_data.UV1Buffer);
 		m_RenderBackend->Destroy(mesh_data.ColorBuffer);
 		m_RenderBackend->Destroy(mesh_data.VertexArray);
 
@@ -199,11 +205,18 @@ void main() {
 		const auto& mesh_data = m_MeshDatas.at(handle);
 		m_RenderBackend->UpdateBuffer(mesh_data.ColorBuffer, 0, count * sizeof(float) * 4, data);
 	}
-	void Renderer::SetUVs(MeshHandle handle, const float* data, SizeType count) {
+
+	void Renderer::SetUV0(MeshHandle handle, const float* data, SizeType count) {
 		VORTEX_ASSERT(m_RenderBackend != nullptr)
 		VORTEX_ASSERT(IsValid(handle))
 		const auto& mesh_data = m_MeshDatas.at(handle);
-		m_RenderBackend->UpdateBuffer(mesh_data.UVBuffer, 0, count * sizeof(float) * 2, data);
+		m_RenderBackend->UpdateBuffer(mesh_data.UV0Buffer, 0, count * sizeof(float) * 2, data);
+	}
+	void Renderer::SetUV1(MeshHandle handle, const float* data, SizeType count) {
+		VORTEX_ASSERT(m_RenderBackend != nullptr)
+		VORTEX_ASSERT(IsValid(handle))
+		const auto& mesh_data = m_MeshDatas.at(handle);
+		m_RenderBackend->UpdateBuffer(mesh_data.UV1Buffer, 0, count * sizeof(float) * 2, data);
 	}
 
 	MaterialHandle Renderer::CreateMaterial(ProgramHandle shader, TextureHandle diffuse, TextureHandle mask) {
@@ -224,37 +237,6 @@ void main() {
 		const auto& mat_data = m_MaterialDatas.at(handle);
 
 		m_MaterialDatas.erase(handle);
-	}
-
-	ProgramHandle Renderer::SetProgram(MaterialHandle handle, ProgramHandle program) {
-		VORTEX_ASSERT(m_RenderBackend != nullptr)
-		VORTEX_ASSERT(IsValid(handle))
-
-		auto& material_data = m_MaterialDatas.at(handle);
-		auto old_handle = material_data.Program;
-		material_data.Program = program;
-
-		return old_handle;
-	}
-	TextureHandle Renderer::SetDiffuse(MaterialHandle handle, TextureHandle diffuse) {
-		VORTEX_ASSERT(m_RenderBackend != nullptr)
-		VORTEX_ASSERT(IsValid(handle))
-
-		auto& material_data = m_MaterialDatas.at(handle);
-		auto old_handle = material_data.Diffuse;
-		material_data.Diffuse = diffuse;
-
-		return old_handle;
-	}
-	TextureHandle Renderer::SetMask(MaterialHandle handle, TextureHandle mask) {
-		VORTEX_ASSERT(m_RenderBackend != nullptr)
-		VORTEX_ASSERT(IsValid(handle))
-
-		auto& material_data = m_MaterialDatas.at(handle);
-		auto old_handle = material_data.Mask;
-		material_data.Mask = mask;
-
-		return old_handle;
 	}
 
 	ViewHandle Renderer::CreateView(const Int32* viewport, const float* projection_matrix, const float* view_matrix) {
@@ -363,8 +345,8 @@ void main() {
 				m_RenderBackend->SetShaderMatrix4(material_data_ptr->Program, "Mat4_Projection", false, projection_mat);
 				m_RenderBackend->SetShaderMatrix4(material_data_ptr->Program, "Mat4_View", false, view_mat);
 
-				m_RenderBackend->Bind(material_data_ptr->Diffuse, 0);
-				m_RenderBackend->Bind(material_data_ptr->Mask, 1);
+				m_RenderBackend->Bind(material_data_ptr->Texture0, 0);
+				m_RenderBackend->Bind(material_data_ptr->Texture1, 1);
 			}
 			const auto& mesh_data = m_MeshDatas.at(mesh_handle);
 

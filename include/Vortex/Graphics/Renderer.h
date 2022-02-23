@@ -26,7 +26,8 @@ namespace Vortex::Graphics {
 
 		BufferHandle PositionBuffer;
 		BufferHandle ColorBuffer;
-		BufferHandle UVBuffer;
+		BufferHandle UV0Buffer;
+		BufferHandle UV1Buffer;
 
 		SizeType IndexCount;
 	};
@@ -36,13 +37,13 @@ namespace Vortex::Graphics {
 			Opaque = 0,
 			Additive,
 			Subtractive,
-		};
+			};
 	}
 
 	struct MaterialData {
 		ProgramHandle Program;
-		TextureHandle Diffuse;
-		TextureHandle Mask;
+		TextureHandle Texture0;
+		TextureHandle Texture1;
 	};
 
 	struct ViewData {
@@ -131,7 +132,7 @@ namespace Vortex::Graphics {
 
 	class Renderer {
 	public:
-		explicit Renderer(RenderBackend* render_backend ,const Int32* resolution);
+		explicit Renderer(RenderBackend* render_backend, const Int32* resolution);
 		~Renderer();
 
 	public: // Mesh
@@ -141,7 +142,8 @@ namespace Vortex::Graphics {
 		void SetIndices(MeshHandle handle, const UInt32* data, SizeType count);
 		void SetPositions(MeshHandle handle, const float* data, SizeType count);
 		void SetColors(MeshHandle handle, const float* data, SizeType count);
-		void SetUVs(MeshHandle handle, const float* data, SizeType count);
+		void SetUV0(MeshHandle handle, const float* data, SizeType count);
+		void SetUV1(MeshHandle handle, const float* data, SizeType count);
 
 		inline const MeshData& GetData(MeshHandle handle) const { return m_MeshDatas.at(handle); };
 		inline bool IsValid(MeshHandle handle) const { return handle.id != InvalidID && m_MeshDatas.find(handle) != m_MeshDatas.end(); };
@@ -150,11 +152,9 @@ namespace Vortex::Graphics {
 		MaterialHandle CreateMaterial(ProgramHandle shader, TextureHandle diffuse, TextureHandle mask);
 		void Destroy(MaterialHandle handle);
 
-		ProgramHandle SetProgram(MaterialHandle handle, ProgramHandle program);
-		TextureHandle SetDiffuse(MaterialHandle handle, TextureHandle diffuse);
-		TextureHandle SetMask(MaterialHandle handle, TextureHandle mask);
-
+		inline MaterialData& GetData(MaterialHandle handle) { return m_MaterialDatas.at(handle); };
 		inline const MaterialData& GetData(MaterialHandle handle) const { return m_MaterialDatas.at(handle); };
+
 		inline bool IsValid(MaterialHandle handle) const {
 			return handle.id != InvalidID && m_MaterialDatas.find(handle) != m_MaterialDatas.end();
 		};
