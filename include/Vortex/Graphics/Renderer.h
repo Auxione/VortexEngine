@@ -131,7 +131,7 @@ namespace Vortex::Graphics {
 
 	class Renderer {
 	public:
-		explicit Renderer(RenderBackend* render_backend);
+		explicit Renderer(RenderBackend* render_backend ,const Int32* rect);
 		~Renderer();
 
 	public: // Mesh
@@ -198,7 +198,7 @@ namespace Vortex::Graphics {
 		void Process();
 
 	private:
-		void CreateStandardAssets();
+		void CreateStandardAssets(const Int32* rect);
 
 	public:
 		ProgramHandle StandardProgram;
@@ -206,6 +206,7 @@ namespace Vortex::Graphics {
 		TextureHandle StandardErrorTexture;
 
 		MaterialHandle StandardMaterial;
+		ViewHandle DefaultView;
 
 	protected:
 		Vector<DrawCommand> m_DrawCommands;

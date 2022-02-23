@@ -2,14 +2,14 @@
 #include "Vortex/Debug/Assert.h"
 
 namespace Vortex::Graphics {
-	Renderer::Renderer(RenderBackend* render_backend)
+	Renderer::Renderer(RenderBackend* render_backend, const Int32* rect)
 		: m_NextMeshHandle{0},
 		  m_NextMaterialHandle{0},
 		  m_NextViewHandle{0},
 		  m_RenderBackend{render_backend},
 		  StandardProgram{} {
 
-		CreateStandardAssets();
+		CreateStandardAssets(rect);
 	}
 
 	Renderer::~Renderer() {
@@ -33,7 +33,7 @@ namespace Vortex::Graphics {
 		m_RenderBackend->Destroy(StandardErrorTexture);
 	}
 
-	void Renderer::CreateStandardAssets() {
+	void Renderer::CreateStandardAssets(const Int32* rect) {
 		char vertex_shader_source[]{
 			R"(
 #version 450 core
@@ -98,6 +98,43 @@ void main() {
 		StandardErrorTexture = m_RenderBackend->CreateTexture2D(2, 2, PixelFormat::RGB_UI8, error_texture);
 
 		StandardMaterial = CreateMaterial(StandardProgram, StandardWhiteTexture, StandardWhiteTexture);
+
+		float identity_matrix[]{
+			1.0f, 0.0f, 0.0f, 0.0f
+			, 0.0f, 1.0f, 0.0f, 0.0f
+			, 0.0f, 0.0f, 1.0f, 0.0f
+			, 0.0f, 0.0f, 0.0f, 1.0f
+		};
+
+		Int32 viewport[]{
+			0, 0, rect[2], rect[3]
+		};
+
+		float projection_mat[16];
+		std::memcpy(projection_mat, identity_matrix, 16 * sizeof(float));
+		{
+			float left = 0.0f;
+			float right = static_cast<float>(rect[2]);
+			float bottom = static_cast<float>(rect[3]);
+			float top = 0.0f;
+			float near = -10.0f;
+			float far = 10.0f;
+
+			float dRL_inv = 1.0f / (right - left);
+			float dTB_inv = 1.0f / (top - bottom);
+			float dNF_inv = 1.0f / (near - far);
+
+			projection_mat[0] = 2.0f * dRL_inv;
+			projection_mat[5] = 2.0f * dTB_inv;
+			projection_mat[10] = 2.0f * dNF_inv;
+
+			projection_mat[12] = -(right + left) * dRL_inv;
+			projection_mat[13] = -(top + bottom) * dTB_inv;
+			projection_mat[14] = -(far + near) * dNF_inv;
+			projection_mat[15] = 1.0f;
+		}
+
+		DefaultView = CreateView(viewport, projection_mat, identity_matrix);
 	}
 
 	MeshHandle Renderer::CreateMesh(Topology::Enum topology, SizeType vertex_count, SizeType index_count) {

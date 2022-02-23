@@ -10,7 +10,7 @@ namespace Vortex {
 	Graphics::WindowBackend* s_WindowBackend = nullptr;
 	Graphics::Renderer* s_Renderer = nullptr;
 
-	void InitGraphicsBackend(GraphicsBackendType::Enum graphics, Int32* rect, const char* title) {
+	void InitGraphicsBackend(GraphicsBackendType::Enum graphics, const Int32* rect, const char* title) {
 		VORTEX_ASSERT(Vortex::s_WindowBackend == nullptr)
 
 		if (graphics == GraphicsBackendType::OpenGL45) {
@@ -21,7 +21,7 @@ namespace Vortex {
 		VORTEX_ASSERT(Vortex::s_WindowBackend != nullptr)
 		VORTEX_ASSERT(Vortex::s_RenderBackend != nullptr)
 
-		Vortex::s_Renderer = GetHeapAllocator()->New<Vortex::Graphics::Renderer>(Vortex::s_RenderBackend);
+		Vortex::s_Renderer = GetHeapAllocator()->New<Vortex::Graphics::Renderer>(Vortex::s_RenderBackend, rect);
 	}
 
 	Graphics::WindowBackend* GetWindowBackend() {
