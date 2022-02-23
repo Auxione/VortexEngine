@@ -1,0 +1,6 @@
+[submodule "dependencies/glfw"]
+	path = dependencies/glfw
+	url = https://github.com/Auxione/glfw
+[submodule "dependencies/openal-soft"]
+	path = dependencies/openal-soft
+	url = https://github.com/Auxione/openal-soft
