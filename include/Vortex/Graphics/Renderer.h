@@ -84,16 +84,8 @@ namespace Vortex::Graphics {
 				m_DrawCall |= static_cast<DrawCallType>(material_handle.id) << 32;
 			}
 		}
-		inline void SetDepth(UInt32 depth) {
-			if (GetTranslucency() == Translucency::Opaque) {
-				m_DrawCall |= static_cast<DrawCallType>(depth) << 24;
-			} else {
-				m_DrawCall |= static_cast<DrawCallType>(depth);
-			}
-		}
-
 		inline Translucency::Enum GetTranslucency() const {
-			return static_cast<Translucency::Enum>((m_DrawCall >> 56) & 0xF); //wrong
+			return static_cast<Translucency::Enum>((m_DrawCall >> 56) & 0xF);
 		}
 		inline ViewHandle GetView() const {
 			HandleType id = (m_DrawCall >> 58) & (0xFF);
@@ -108,6 +100,22 @@ namespace Vortex::Graphics {
 			}
 			return MaterialHandle{static_cast<HandleType>(id)};
 		}
+
+		inline MeshHandle GetMesh() const { return m_MeshHandle; }
+		inline const float* GetTransform() const { return m_TransformMatrix; }
+
+		inline bool operator<(const DrawCommand& other) const {
+			return m_DrawCall < other.m_DrawCall;
+		}
+
+	protected:
+		inline void SetDepth(UInt32 depth) {
+			if (GetTranslucency() == Translucency::Opaque) {
+				m_DrawCall |= static_cast<DrawCallType>(depth) << 24;
+			} else {
+				m_DrawCall |= static_cast<DrawCallType>(depth);
+			}
+		}
 		inline UInt32 GetDepth() const {
 			if (GetTranslucency() == Translucency::Opaque) {
 				return (m_DrawCall >> 24) & (0xFFFFFFFFF);
@@ -115,8 +123,6 @@ namespace Vortex::Graphics {
 				return (m_DrawCall) & (0xFFFFFFFFF);
 			}
 		}
-		inline MeshHandle GetMesh() const { return m_MeshHandle; }
-		inline const float* GetTransform() const { return m_TransformMatrix; }
 
 	protected:
 		DrawCallType m_DrawCall{0};
@@ -176,7 +182,8 @@ namespace Vortex::Graphics {
 		HandleType m_NextViewHandle;
 
 	public:
-		inline void Submit(DrawCommand draw_command) {
+
+		void Submit(const DrawCommand& draw_command) {
 			m_DrawCommands.EmplaceBack(draw_command);
 		}
 

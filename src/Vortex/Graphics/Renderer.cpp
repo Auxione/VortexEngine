@@ -258,7 +258,30 @@ void main() {
 	}
 
 	void Renderer::Process() {
-		//std::sort(m_DrawCommands.Data(), m_DrawCommands.Data() + m_DrawCommands.Size());
+		//calculate depths
+		for (auto& command :  m_DrawCommands) {
+			const auto& view_position_mat = m_ViewDatas.at(command.GetView()).ViewMatrix;
+			const auto& mesh_position_mat = command.m_TransformMatrix;
+
+			float mesh_position[3]{
+				mesh_position_mat[12]
+				, mesh_position_mat[13]
+				, mesh_position_mat[14]
+			};
+			float view_position[3]{
+				view_position_mat[12]
+				, view_position_mat[13]
+				, view_position_mat[14]
+			};
+
+			float spr_dist{0};
+			for (int i = 0; i < 3; ++i) {
+				spr_dist += mesh_position[i] + view_position[i];
+			}
+			command.SetDepth(static_cast<UInt32>(spr_dist));
+		}
+
+		std::sort(m_DrawCommands.Data(), m_DrawCommands.Data() + m_DrawCommands.Size());
 
 		MaterialHandle current_material;
 		ViewHandle current_view;
@@ -269,7 +292,7 @@ void main() {
 
 		m_RenderBackend->SetState(RenderStates::Blending, false);
 
-		for (auto command :  m_DrawCommands) {
+		for (const auto& command :  m_DrawCommands) {
 			auto mesh_handle = command.GetMesh();
 			auto mat_handle = command.GetMaterial();
 			auto view_handle = command.GetView();
