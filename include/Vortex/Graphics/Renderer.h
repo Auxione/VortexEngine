@@ -37,7 +37,7 @@ namespace Vortex::Graphics {
 			Opaque = 0,
 			Additive,
 			Subtractive,
-			};
+		};
 	}
 
 	struct MaterialData {
@@ -59,6 +59,13 @@ namespace Vortex::Graphics {
 	struct DrawCommand {
 		friend class Renderer;
 
+		DrawCommand(const float* transform, MeshHandle mesh_handle, Translucency::Enum translucency)
+			: m_DrawCall{0},
+			  m_TransformMatrix{},
+			  m_MeshHandle{mesh_handle} {
+			m_DrawCall |= static_cast<DrawCallType>(translucency) << 56;
+			std::memcpy(m_TransformMatrix, transform, 16 * sizeof(float));
+		}
 		//	if translucency opaque
 		//  63--------------58------------------56------------------24--------------0
 		//  |	View		||	Translucency	||	Depth			||	Material	|
@@ -67,16 +74,6 @@ namespace Vortex::Graphics {
 		//  63--------------58------------------56--------------32------------------0
 		//  |	View		||	Translucency	||	Material	||	Depth			|
 
-		inline void Begin(Translucency::Enum translucency) {
-			m_DrawCall |= static_cast<DrawCallType>(translucency) << 56;
-		}
-
-		inline void SetMesh(MeshHandle mesh_handle) {
-			m_MeshHandle = mesh_handle;
-		}
-		inline void SetTransform(const float* matr) {
-			std::memcpy(m_TransformMatrix, matr, 16 * sizeof(float));
-		}
 		inline void SetView(ViewHandle view_handle) {
 			m_DrawCall |= static_cast<DrawCallType>(view_handle.id) << 58;
 		}
@@ -145,30 +142,26 @@ namespace Vortex::Graphics {
 		void SetUV0(MeshHandle handle, const float* data, SizeType count);
 		void SetUV1(MeshHandle handle, const float* data, SizeType count);
 
-		inline const MeshData& GetData(MeshHandle handle) const { return m_MeshDatas.at(handle); };
+		const MeshData& operator[](MeshHandle handle) const { return m_MeshDatas.at(handle); }
 		inline bool IsValid(MeshHandle handle) const { return handle.id != InvalidID && m_MeshDatas.find(handle) != m_MeshDatas.end(); };
 
 	public: // Material
-		MaterialHandle CreateMaterial(ProgramHandle shader, TextureHandle diffuse, TextureHandle mask);
+		MaterialHandle CreateMaterial(ProgramHandle shader, TextureHandle texture0);
 		void Destroy(MaterialHandle handle);
 
-		inline MaterialData& GetData(MaterialHandle handle) { return m_MaterialDatas.at(handle); };
-		inline const MaterialData& GetData(MaterialHandle handle) const { return m_MaterialDatas.at(handle); };
+		MaterialData& operator[](MaterialHandle handle) { return m_MaterialDatas.at(handle); }
+		const MaterialData& operator[](MaterialHandle handle) const { return m_MaterialDatas.at(handle); }
 
 		inline bool IsValid(MaterialHandle handle) const {
 			return handle.id != InvalidID && m_MaterialDatas.find(handle) != m_MaterialDatas.end();
 		};
-
 	public: // View
 		ViewHandle CreateView(const Int32* dimensions, const float* projection_matrix, const float* view_matrix);
 		void Destroy(ViewHandle handle);
 
-		void SetClearColor(ViewHandle handle, const float* color);
-		void SetViewport(ViewHandle handle, const Int32* viewport);
-		void SetProjectionMatrix(ViewHandle handle, const float* projection);
-		void SetViewMatrix(ViewHandle handle, const float* view);
+		ViewData& operator[](ViewHandle handle) { return m_ViewDatas.at(handle); }
+		const ViewData& operator[](ViewHandle handle) const { return m_ViewDatas.at(handle); }
 
-		inline const ViewData& GetData(ViewHandle handle) const { return m_ViewDatas.at(handle); };
 		inline bool IsValid(ViewHandle handle) const { return handle.id != InvalidID && m_ViewDatas.find(handle) != m_ViewDatas.end(); };
 
 	protected:
@@ -190,9 +183,13 @@ namespace Vortex::Graphics {
 		template<typename T>
 		inline void Render(const T& obj) {
 			DrawCommandGenerator<T> generator;
-			DrawCommand cmd;
-			generator(this, cmd, obj);
-			m_DrawCommands.EmplaceBack(cmd);
+			generator(this, obj);
+		}
+
+		template<typename T>
+		inline void Render(ViewHandle view, const float* transform, const T& obj) {
+			DrawCommandGenerator<T> generator;
+			generator(this, view, transform, obj);
 		}
 
 		void Process();
@@ -205,7 +202,6 @@ namespace Vortex::Graphics {
 		TextureHandle StandardWhiteTexture;
 		TextureHandle StandardErrorTexture;
 
-		MaterialHandle StandardMaterial;
 		ViewHandle DefaultView;
 
 	protected:

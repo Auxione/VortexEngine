@@ -3,11 +3,11 @@
 
 namespace Vortex::Graphics {
 	Renderer::Renderer(RenderBackend* render_backend, const Int32* resolution)
-	: m_NextMeshHandle{0},
-	m_NextMaterialHandle{0},
-	m_NextViewHandle{0},
-	m_RenderBackend{render_backend},
-	StandardProgram{} {
+		: m_NextMeshHandle{0},
+		  m_NextMaterialHandle{0},
+		  m_NextViewHandle{0},
+		  m_RenderBackend{render_backend},
+		  StandardProgram{} {
 
 		CreateStandardAssets(resolution);
 	}
@@ -98,8 +98,6 @@ void main() {
 			, 255, 0, 255
 		};
 		StandardErrorTexture = m_RenderBackend->CreateTexture2D(2, 2, PixelFormat::RGB_UI8, error_texture);
-
-		StandardMaterial = CreateMaterial(StandardProgram, StandardWhiteTexture, StandardWhiteTexture);
 
 		float identity_matrix[]{
 			1.0f, 0.0f, 0.0f, 0.0f
@@ -219,13 +217,13 @@ void main() {
 		m_RenderBackend->UpdateBuffer(mesh_data.UV1Buffer, 0, count * sizeof(float) * 2, data);
 	}
 
-	MaterialHandle Renderer::CreateMaterial(ProgramHandle shader, TextureHandle diffuse, TextureHandle mask) {
+	MaterialHandle Renderer::CreateMaterial(ProgramHandle shader, TextureHandle texture0) {
 		MaterialHandle handle{m_NextMaterialHandle};
 		++m_NextMaterialHandle;
 		MaterialData data{
 			shader
-			, diffuse
-			, mask
+			, texture0
+			, StandardWhiteTexture
 		};
 
 		m_MaterialDatas[handle] = data;
@@ -257,30 +255,6 @@ void main() {
 		VORTEX_ASSERT(IsValid(handle))
 
 		m_ViewDatas.erase(handle);
-	}
-	void Renderer::SetClearColor(ViewHandle handle, const float* color) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto& view_data = m_ViewDatas.at(handle);
-
-		std::memcpy(view_data.ClearColor, color, 4 * sizeof(float));
-	}
-	void Renderer::SetViewport(ViewHandle handle, const Int32* viewport) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto& view_data = m_ViewDatas.at(handle);
-
-		std::memcpy(view_data.Viewport, viewport, 4 * sizeof(float));
-	}
-	void Renderer::SetProjectionMatrix(ViewHandle handle, const float* projection) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto& view_data = m_ViewDatas.at(handle);
-
-		std::memcpy(view_data.ProjectionMatrix, projection, 16 * sizeof(float));
-	}
-	void Renderer::SetViewMatrix(ViewHandle handle, const float* view) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto& view_data = m_ViewDatas.at(handle);
-
-		std::memcpy(view_data.ViewMatrix, view, 16 * sizeof(float));
 	}
 
 	void Renderer::Process() {
