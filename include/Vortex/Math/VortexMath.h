@@ -542,6 +542,9 @@ namespace Vortex {
 			m_Data[2] = m2;
 			m_Data[3] = m3;
 		}
+		inline void Set(const float* other) {
+			std::memcpy(m_Data, other, 4 * sizeof(float));
+		}
 
 	public:
 		Vector2 operator*(const Vector2& rhs) const;
@@ -605,6 +608,9 @@ namespace Vortex {
 			m_Data[6] = m6;
 			m_Data[7] = m7;
 			m_Data[8] = m8;
+		}
+		inline void Set(const float* other) {
+			std::memcpy(m_Data, other, 9 * sizeof(float));
 		}
 
 	public:
@@ -700,6 +706,9 @@ namespace Vortex {
 			m_Data[13] = m13;
 			m_Data[14] = m14;
 			m_Data[15] = m15;
+		}
+		inline void Set(const float* other) {
+			std::memcpy(m_Data, other, 16 * sizeof(float));
 		}
 
 	public:
