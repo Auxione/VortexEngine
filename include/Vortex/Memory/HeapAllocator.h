@@ -18,7 +18,8 @@ namespace Vortex::Memory {
 
 	public:
 		inline void* Allocate(SizeType size) override {
-			auto ptr = malloc(size);
+			//auto ptr = malloc(size);
+			auto ptr = new Byte[size];
 
 #ifdef VORTEX_DEBUG
 			VORTEX_ASSERT(d_MarkedID != d_NextAllocationID)
@@ -36,7 +37,8 @@ namespace Vortex::Memory {
 			d_AllocRegistry.erase(byte_ptr);
 			d_SizeRegistry.erase(byte_ptr);
 #endif
-			return free(ptr);
+			delete[] static_cast<Byte*>(ptr);
+			//free(ptr);
 		}
 
 #ifdef VORTEX_DEBUG
