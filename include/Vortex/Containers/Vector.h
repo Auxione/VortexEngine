@@ -1,5 +1,4 @@
 #pragma once
-#include <initializer_list>
 
 #include "Vortex/Memory/Memory.h"
 #include "Vortex/Memory/HeapAllocator.h"
