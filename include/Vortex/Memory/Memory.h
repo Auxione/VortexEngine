@@ -24,7 +24,7 @@ namespace Vortex {
 
 namespace Vortex {
 	template<typename Dest_Type, typename Source_Type>
-	Dest_Type UnionCast(Source_Type source) {
+	constexpr Dest_Type UnionCast(Source_Type source) {
 		VORTEX_STATIC_ASSERT((sizeof(Dest_Type) == sizeof(Source_Type)));
 		union {
 			Source_Type source_type;
@@ -35,8 +35,7 @@ namespace Vortex {
 	}
 
 	template<typename T, SizeType N>
-	SizeType ArrayCount(const T(& data)[N]) { return N; }
-
+	constexpr SizeType ArrayCount(const T(& data)[N]) { return N; }
 }
 
 #include <string>
