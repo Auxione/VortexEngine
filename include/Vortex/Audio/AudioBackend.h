@@ -4,14 +4,13 @@
 #include <unordered_map>
 
 namespace Vortex::Audio {
-	VORTEX_HANDLE(BufferHandle);
-	VORTEX_HANDLE(SourceHandle);
-}
 
-VORTEX_HANDLE_HASH(Vortex::Audio::BufferHandle);
-VORTEX_HANDLE_HASH(Vortex::Audio::SourceHandle);
+	struct BufferData;
+	struct SourceData;
 
-namespace Vortex::Audio {
+	using BufferHandle = Handle<BufferData>;
+	using SourceHandle = Handle<SourceData>;
+
 	namespace AudioFormat {
 		enum Enum {
 			Mono8 = 0,

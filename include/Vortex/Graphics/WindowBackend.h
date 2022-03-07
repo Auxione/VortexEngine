@@ -4,7 +4,10 @@
 #include "Vortex/Core/Event.h"
 
 namespace Vortex::Graphics {
-	VORTEX_HANDLE(MonitorHandle);
+	struct MonitorData;
+	struct WindowData;
+
+	using MonitorHandle = Handle<MonitorData>;
 
 	struct WindowData {
 		String Title;
