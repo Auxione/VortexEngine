@@ -1,6 +1,5 @@
 #pragma once
-#include "Vortex/Graphics/RenderBackend.h"
-#include "Vortex/Containers/Vector.h"
+#include "Vortex/Containers/Array.h"
 #include "Vortex/Memory/Memory.h"
 
 #include <filesystem>
@@ -28,15 +27,15 @@ namespace Vortex {
 	}
 
 	struct ImageData {
-		Vector<UInt8> Data;
-		SizeType Size[2];
+		Array<UInt8> Pixels;
+		UInt16 Size[2];
 		ImageChannels::Enum Channels;
 	};
 	bool LoadImage2D(const std::filesystem::path& image_path, ImageData& data);
 
 	struct HDRImageData {
-		Vector<float> Data;
-		SizeType Size[2];
+		Array<float> Pixels;
+		UInt16 Size[2];
 		ImageChannels::Enum Channels;
 	};
 	bool LoadHDRImage2D(const std::filesystem::path& image_path, HDRImageData& data);

@@ -28,7 +28,7 @@ namespace Vortex {
 			data.Size[0] = w;
 			data.Size[1] = h;
 			data.Channels = STB::Format[c];
-			data.Data.Set(loaded_img_data, w * h * c);
+			data.Pixels.Set(loaded_img_data, w * h * c);
 
 			stbi_image_free(loaded_img_data);
 			VORTEX_LOG_INFO("[ImageLoader] Loaded from: %s.", file_name);
@@ -51,7 +51,7 @@ namespace Vortex {
 			data.Size[0] = w;
 			data.Size[1] = h;
 			data.Channels = STB::Format[c];
-			data.Data.Set(loaded_img_data, w * h * c);
+			data.Pixels.Set(loaded_img_data, w * h * c);
 
 			stbi_image_free(loaded_img_data);
 			VORTEX_LOG_INFO("[ImageLoader] Loaded from: %s.", file_name);
