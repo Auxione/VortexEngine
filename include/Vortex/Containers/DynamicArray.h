@@ -57,7 +57,7 @@ namespace Vortex {
 		}
 
 	public:
-		~DynamicArray() {
+		virtual ~DynamicArray() {
 			GetHeapAllocator()->Delete(m_Array);
 		}
 
