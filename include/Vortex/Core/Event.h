@@ -62,6 +62,7 @@ namespace Vortex {
 
 		constexpr static bool IsKeyboard(EventType::Enum type) { return type < KeyboardType; }
 		constexpr static bool IsMouse(EventType::Enum type) { return KeyboardType < type && type < MouseType; }
+		constexpr static bool IsInput(EventType::Enum type) { return type < MouseType; }
 		constexpr static bool IsWindow(EventType::Enum type) { return MouseType < type && type < WindowType; }
 		constexpr static bool IsApplication(EventType::Enum type) { return WindowType < type && type < ApplicationType; }
 	};
