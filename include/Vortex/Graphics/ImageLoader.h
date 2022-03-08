@@ -1,5 +1,5 @@
 #pragma once
-#include "Vortex/Containers/Array.h"
+#include "Vortex/Containers/DynamicArray.h"
 #include "Vortex/Memory/Memory.h"
 
 #include <filesystem>
@@ -27,14 +27,14 @@ namespace Vortex {
 	}
 
 	struct ImageData {
-		Array<UInt8> Pixels;
+		DynamicArray<UInt8> Pixels;
 		UInt16 Size[2];
 		ImageChannels::Enum Channels;
 	};
 	bool LoadImage2D(const std::filesystem::path& image_path, ImageData& data);
 
 	struct HDRImageData {
-		Array<float> Pixels;
+		DynamicArray<float> Pixels;
 		UInt16 Size[2];
 		ImageChannels::Enum Channels;
 	};
