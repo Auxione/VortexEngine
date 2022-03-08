@@ -3,6 +3,10 @@
 #include "Vortex/Core/Event.h"
 
 namespace Vortex {
+
+	template<typename T>
+	class Actor {};
+
 	namespace CursorInputMode {
 		enum Enum {
 			OS,
@@ -18,6 +22,12 @@ namespace Vortex {
 	public:
 		void Update();
 		void OnEvent(const Event& event);
+
+		template<typename T>
+		inline void Control(float dt, T& obj) {
+			Actor<T> actor;
+			actor(*this, dt, obj);
+		}
 
 	public: // cursor
 		float CursorSensivity[2];

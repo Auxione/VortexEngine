@@ -55,17 +55,43 @@ namespace Vortex {
 	}
 
 	void Input::OnEvent(const Event& event) {
-		auto type = event.Type;
-		if (EventType::IsKeyboard(type)) {
-			if (type == EventType::KeyPress || type == EventType::KeyRepeat) {
+		switch (event.Type) {
+			case EventType::None:
+			case EventType::MouseType:
+			case EventType::WindowResize:
+			case EventType::WindowPathDrop:
+			case EventType::WindowType:
+			case EventType::ApplicationFocusLost:
+			case EventType::ApplicationFocusGain:
+			case EventType::ApplicationClose:
+			case EventType::ApplicationType:
+			case EventType::KeyboardType:break;
+
+			case EventType::KeyPress: {
 				m_Keyboard[event.Keycode] = StateDown | StateChanged;
-			} else if (type == EventType::KeyRelease) {
-				m_Keyboard[event.Keycode] = StateUp | StateChanged;
-			} else if (type == EventType::CharInput) {
-				m_LastChar = event.Character;
+				break;
 			}
-		} else if (EventType::IsMouse(type)) {
-			if (type == EventType::MouseMove) {
+			case EventType::KeyRelease: {
+				m_Keyboard[event.Keycode] = StateUp | StateChanged;
+				break;
+			}
+			case EventType::KeyRepeat: {
+				m_Keyboard[event.Keycode] = StateDown | StateChanged;
+				break;
+			}
+			case EventType::CharInput: {
+				m_LastChar = event.Character;
+				break;
+			}
+			case EventType::MousePress: {
+				m_MouseButton[event.Button] = StateDown | StateChanged;
+				break;
+			}
+			case EventType::MouseRelease: {
+				m_MouseButton[event.Button] = StateUp | StateChanged;
+				break;
+			}
+			case EventType::MouseMove: {
 				m_CursorDelta[0] = event.Position[0] - m_LastCursorPosition[0];
 				m_CursorDelta[1] = event.Position[1] - m_LastCursorPosition[1];
 				m_LastCursorPosition[0] = event.Position[0];
@@ -75,14 +101,12 @@ namespace Vortex {
 					m_CursorPosition[0] = Math::Clamp(event.Position[0], CursorLimits[0], CursorLimits[2]);
 					m_CursorPosition[1] = Math::Clamp(event.Position[1], CursorLimits[1], CursorLimits[3]);
 				}
-
-			} else if (type == EventType::MousePress) {
-				m_MouseButton[event.Button] = StateDown | StateChanged;
-			} else if (type == EventType::MouseRelease) {
-				m_MouseButton[event.Button] = StateUp | StateChanged;
-			} else if (type == EventType::ScrollChange) {
+				break;
+			}
+			case EventType::ScrollChange: {
 				m_ScrollDelta[0] = event.Position[0];
 				m_ScrollDelta[1] = event.Position[1];
+				break;
 			}
 		}
 	}
