@@ -6,11 +6,6 @@
   #define VORTEX_DEBUG_BREAK __debugbreak();
 #endif
 
-#ifndef VORTEX_STATIC_ASSERT
-  #define VORTEX_STATIC_ASSERT(x) static_assert( x , #x );
-  #define VORTEX_STATIC_ASSERT_MSG(x, msg) static_assert( x , msg );
-#endif
-
 #ifndef VORTEX_ASSERT
   #include <cstdio>
   #include <filesystem>
@@ -37,4 +32,9 @@
 #define VORTEX_ASSERT(x)
 #define VORTEX_ASSERT_MSG(x, fmt, ...)
 
+#endif
+
+#ifndef VORTEX_STATIC_ASSERT
+  #define VORTEX_STATIC_ASSERT(x) static_assert( x , #x );
+  #define VORTEX_STATIC_ASSERT_MSG(x, msg) static_assert( x , msg );
 #endif
