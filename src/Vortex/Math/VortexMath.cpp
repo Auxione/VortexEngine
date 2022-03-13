@@ -318,12 +318,12 @@ namespace Vortex {
 		// |  0  4  8  12 |   | 0 |
 		// |  1  5  9  13 | * | 1 |
 		// |  2  6 10  14 |   | 2 |
-		// |  3  7 11  15 |   | 2 |
+		// |  3  7 11  15 |   | 3 |
 		return Vector4{
-			m_Data[0] * rhs[0] + m_Data[4] * m_Data[1] + m_Data[8] * rhs[2] + m_Data[12] * rhs[3]
-			, m_Data[1] * rhs[0] + m_Data[5] * m_Data[1] + m_Data[9] * rhs[2] + m_Data[13] * rhs[3]
-			, m_Data[2] * rhs[0] + m_Data[6] * m_Data[1] + m_Data[10] * rhs[2] + m_Data[14] * rhs[3]
-			, m_Data[3] * rhs[0] + m_Data[7] * m_Data[1] + m_Data[11] * rhs[2] + m_Data[15] * rhs[3]
+			m_Data[0] * rhs[0] + m_Data[4] * rhs[1] + m_Data[8] * rhs[2] + m_Data[12] * rhs[3]
+			, m_Data[1] * rhs[0] + m_Data[5] * rhs[1] + m_Data[9] * rhs[2] + m_Data[13] * rhs[3]
+			, m_Data[2] * rhs[0] + m_Data[6] * rhs[1] + m_Data[10] * rhs[2] + m_Data[14] * rhs[3]
+			, m_Data[3] * rhs[0] + m_Data[7] * rhs[1] + m_Data[11] * rhs[2] + m_Data[15] * rhs[3]
 		};
 	}
 	Matrix4 Matrix4::operator*(const Matrix4& rhs) const {
