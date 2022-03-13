@@ -7,8 +7,7 @@ namespace Vortex {
 	template<typename T, SizeType Cap>
 	class StaticArray {
 	public:
-		inline explicit StaticArray()
-			: m_Array{} {}
+		constexpr explicit StaticArray() = default;
 
 	public:
 		template<SizeType N>
@@ -27,47 +26,19 @@ namespace Vortex {
 			}
 		}
 
-		inline StaticArray(const StaticArray& other)
-			: m_Array{} {
-			for (SizeType i = 0; i < Cap; ++i) {
-				m_Array[i] = other.m_Array[i];
-			}
-		}
-
-		inline StaticArray(StaticArray&& other) noexcept
-			: m_Array{} {
-			for (SizeType i = 0; i < Cap; ++i) {
-				m_Array[i] = other.m_Array[i];
-			}
-		}
+		constexpr StaticArray(const StaticArray& other) = default;
+		constexpr StaticArray(StaticArray&& other) noexcept = default;
 
 	public:
 		virtual ~StaticArray() = default;
 
 	public:
-		inline StaticArray& operator=(const StaticArray& other) {
-			if (this == &other) return *this;
-
-			for (SizeType i = 0; i < Cap; ++i) {
-				m_Array[i] = other.m_Array[i];
-			}
-
-			return *this;
-		}
+		constexpr StaticArray& operator=(const StaticArray& other) = default;
+		constexpr StaticArray& operator=(StaticArray&& other) noexcept = default;
 
 		template<SizeType N>
-		inline StaticArray& operator=(const T(& data)[N]) {
+		constexpr StaticArray& operator=(const T(& data)[N]) {
 			std::memcpy(m_Array, data, N * sizeof(T));
-
-			return *this;
-		}
-
-		inline StaticArray& operator=(StaticArray&& other) noexcept {
-			if (this == &other) return *this;
-
-			for (SizeType i = 0; i < Cap; ++i) {
-				m_Array[i] = other.m_Array[i];
-			}
 
 			return *this;
 		}
@@ -82,19 +53,11 @@ namespace Vortex {
 		}
 
 	public:
-		inline T& Front() {
-			return m_Array[0];
-		}
-		inline const T& Front() const {
-			return m_Array[0];
-		}
+		constexpr T& Front() { return m_Array[0]; }
+		constexpr const T& Front() const { return m_Array[0]; }
 
-		inline T& Back() {
-			return m_Array[Cap - 1];
-		}
-		inline const T& Back() const {
-			return m_Array[Cap - 1];
-		}
+		constexpr T& Back() { return m_Array[Cap - 1]; }
+		constexpr const T& Back() const { return m_Array[Cap - 1]; }
 
 	public:
 		inline void Set(const T* data, SizeType count) {
@@ -111,10 +74,10 @@ namespace Vortex {
 		using const_iterator = ConstIterator<T>;
 
 	public:
-		iterator begin() const { return iterator{m_Array}; }
-		iterator end() const { return iterator{m_Array} + Cap; }
-		const_iterator cbegin() const { return const_iterator{m_Array}; }
-		const_iterator cend() const { return const_iterator{m_Array} + Cap; }
+		inline iterator begin() const { return iterator{m_Array}; }
+		inline iterator end() const { return iterator{m_Array} + Cap; }
+		inline const_iterator cbegin() const { return const_iterator{m_Array}; }
+		inline const_iterator cend() const { return const_iterator{m_Array} + Cap; }
 
 	public:
 		constexpr SizeType Capacity() const { return Cap; }
