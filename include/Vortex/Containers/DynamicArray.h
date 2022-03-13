@@ -97,7 +97,7 @@ namespace Vortex {
 			m_Array = other.m_Array;
 
 			other.m_Capacity = 0;
-			other.m_Buffer = nullptr;
+			other.m_Array = nullptr;
 
 			return *this;
 		}
