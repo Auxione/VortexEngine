@@ -46,6 +46,15 @@ namespace Vortex::Math {
 			return value;
 		}
 	}
+
+	template<typename T>
+	constexpr bool IsEven(T value) {
+		VORTEX_STATIC_ASSERT(std::is_integral<T>::value)
+		return !(value & 1);
+	}
+
+	template<typename T>
+	constexpr bool IsOdd(T value) { return IsEven(value); }
 }
 
 #include "Vortex/Math/BasicCircle.h"
