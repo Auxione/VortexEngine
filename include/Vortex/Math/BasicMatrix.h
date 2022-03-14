@@ -12,6 +12,9 @@ namespace Vortex {
 		inline operator T*() { return m_Data; }
 		inline operator const T*() const { return m_Data; }
 
+		inline T* Data() { return m_Data; }
+		inline const T* Data() const { return m_Data; }
+
 	protected:
 		constexpr void Zero() {
 			for (int i = 0; i < Width * Height; ++i) {
