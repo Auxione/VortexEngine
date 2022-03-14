@@ -321,46 +321,46 @@ namespace Vortex::Graphics {
 		};
 
 		constexpr static const UInt16 Size[]{
-			4 * 1      //Float1
-			, 4 * 2    //Float2
-			, 4 * 3    //Float3
-			, 4 * 4    //Float4
+			sizeof(float) * 1      //Float1
+			, sizeof(float) * 2    //Float2
+			, sizeof(float) * 3    //Float3
+			, sizeof(float) * 4    //Float4
 
-			, 2 * 2    //Matrix2
-			, 3 * 3    //Matrix3
-			, 4 * 4    //Matrix4
+			, sizeof(float) * 2 * 2    //Matrix2
+			, sizeof(float) * 3 * 3    //Matrix3
+			, sizeof(float) * 4 * 4    //Matrix4
 
 			, 0        //FloatingTypeCount
 
-			, 4 * 1    //Int1
-			, 4 * 2    //Int2
-			, 4 * 3    //Int3
-			, 4 * 4    //Int4
+			, sizeof(Int32) * 1    //Int1
+			, sizeof(Int32) * 2    //Int2
+			, sizeof(Int32) * 3    //Int3
+			, sizeof(Int32) * 4    //Int4
 
-			, 4 * 1    //UInt1
-			, 4 * 2    //UInt2
-			, 4 * 3    //UInt3
-			, 4 * 4    //UInt4
+			, sizeof(UInt32) * 1    //UInt1
+			, sizeof(UInt32) * 2    //UInt2
+			, sizeof(UInt32) * 3    //UInt3
+			, sizeof(UInt32) * 4    //UInt4
 
-			, 1 * 1    //Byte1
-			, 1 * 2    //Byte2
-			, 1 * 3    //Byte3
-			, 1 * 4    //Byte4
+			, sizeof(Byte) * 1    //Byte1
+			, sizeof(Byte) * 2    //Byte2
+			, sizeof(Byte) * 3    //Byte3
+			, sizeof(Byte) * 4    //Byte4
 
-			, 1 * 1    //UByte1
-			, 1 * 2    //UByte2
-			, 1 * 3    //UByte3
-			, 1 * 4    //UByte4
+			, sizeof(UByte) * 1    //UByte1
+			, sizeof(UByte) * 2    //UByte2
+			, sizeof(UByte) * 3    //UByte3
+			, sizeof(UByte) * 4    //UByte4
 
-			, 2 * 1        //Short1
-			, 2 * 2        //Short2
-			, 2 * 3        //Short3
-			, 2 * 4        //Short4
+			, sizeof(Int16) * 1        //Short1
+			, sizeof(Int16) * 2        //Short2
+			, sizeof(Int16) * 3        //Short3
+			, sizeof(Int16) * 4        //Short4
 
-			, 2 * 1        //UShort1
-			, 2 * 2        //UShort2
-			, 2 * 3        //UShort3
-			, 2 * 4        //UShort4
+			, sizeof(UInt16) * 1        //UShort1
+			, sizeof(UInt16) * 2        //UShort2
+			, sizeof(UInt16) * 3        //UShort3
+			, sizeof(UInt16) * 4        //UShort4
 
 			, 0        //IntegerTypeCount
 
@@ -372,11 +372,11 @@ namespace Vortex::Graphics {
 			, 3    //Float3
 			, 4    //Float4
 
-			, 4    //Matrix2
-			, 9    //Matrix3
-			, 16    //Matrix4
+			, 2 * 2    //Matrix2
+			, 3 * 3    //Matrix3
+			, 4 * 4    //Matrix4
 
-			, 0        //FloatingTypeCount
+			, 0    //FloatingTypeCount
 
 			, 1    //Int1
 			, 2    //Int2
@@ -398,23 +398,23 @@ namespace Vortex::Graphics {
 			, 3    //UByte3
 			, 4    //UByte4
 
-			, 1        //Short1
-			, 2        //Short2
-			, 3        //Short3
-			, 4        //Short4
+			, 1    //Short1
+			, 2    //Short2
+			, 3    //Short3
+			, 4    //Short4
 
-			, 1        //UShort1
-			, 2        //UShort2
-			, 3        //UShort3
-			, 4        //UShort4
+			, 1    //UShort1
+			, 2    //UShort2
+			, 3    //UShort3
+			, 4    //UShort4
 
-			, 0        //IntegerTypeCount
+			, 0    //IntegerTypeCount
 
-			, 1        //Sampler1D
-			, 1        //Sampler2D
-			, 1        //Sampler3D
+			, 1    //Sampler1D
+			, 1    //Sampler2D
+			, 1    //Sampler3D
 
-			, 0        //SamplerTypeCount
+			, 0    //SamplerTypeCount
 		};
 
 		constexpr static const char* ToString[]{
