@@ -468,4 +468,38 @@ namespace Vortex::Graphics {
 			, "SamplerTypeCount"
 		};
 	}
+
+	namespace ViewLayer {
+		enum Enum {
+			World = 0,
+			HUD
+		};
+		constexpr const char* ToString[]{
+			"World"
+			, "HUD"
+		};
+	}
+
+	namespace MeshAttribute {
+		enum Enum {
+			Position = 0,
+			Normal,
+			Color,
+			UV,
+
+			Count
+		};
+		constexpr ElementType::Enum ElementType[]{
+			ElementType::Float3
+			, ElementType::Float3
+			, ElementType::Float4
+			, ElementType::Float2
+		};
+		constexpr const char* ToString[]{
+			"Position"
+			, "Normal"
+			, "Color"
+			, "UV"
+		};
+	}
 }
