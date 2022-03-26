@@ -14,8 +14,8 @@ namespace Vortex {
 				m_StateSignal.wait(lock, [this] { return StateWaitFn(); });
 				if (!m_Running) { break; }
 
-				thread_job = m_JobQueue.Front();
-				m_JobQueue.Pop();
+				thread_job = m_JobQueue.front();
+				m_JobQueue.pop();
 				lock.unlock();
 
 				++m_ActiveJobCount;
@@ -24,7 +24,7 @@ namespace Vortex {
 				} catch (const std::exception& e) {
 					Vortex::Logger::Log(Logger::LogType::Error, "Exception raised when executing job.\n%s\n", e.what());
 				}
-				GetHeapAllocator()->Delete(thread_job);
+				delete thread_job;
 				--m_ActiveJobCount;
 
 				m_JobCompleteSignal.notify_all();
@@ -32,8 +32,8 @@ namespace Vortex {
 
 		};
 
-		for (SizeType i = 0; i < m_Threads.Capacity(); ++i) {
-			m_Threads.Emplace(i, thread_job);
+		for (SizeType i = 0; i < m_Threads.capacity(); ++i) {
+			m_Threads.emplace(m_Threads.begin() + i, thread_job);
 		}
 	}
 
@@ -49,7 +49,7 @@ namespace Vortex {
 
 	ThreadPool& ThreadPool::Dispatch() {
 		std::unique_lock<std::mutex> lock(m_Mutex);
-		if (m_JobQueue.Empty()) { return *this; }
+		if (m_JobQueue.empty()) { return *this; }
 
 		m_StateSignal.notify_all();
 		return *this;
@@ -63,20 +63,23 @@ namespace Vortex {
 			thread.join();
 		}
 
-		m_JobQueue.Clear();
-		m_Threads.Clear();
+		while (m_JobQueue.empty()) {
+			delete m_JobQueue.front();
+			m_JobQueue.pop();
+		}
+		m_Threads.clear();
 	}
 
 	void ThreadPool::Clear() {
 		std::unique_lock<std::mutex> lock{m_Mutex};
-		while (!m_JobQueue.Empty()) {
-			delete m_JobQueue.Front();
-			m_JobQueue.Pop();
+		while (!m_JobQueue.empty()) {
+			delete m_JobQueue.front();
+			m_JobQueue.pop();
 		}
 	}
 
 	void ThreadPool::SplitForEach(SizeType array_count, SizeType& chunk_size, SizeType& job_count) {
-		auto chunk_count = m_Threads.Size() > array_count ? array_count : m_Threads.Size(); //min(m_Threads.Size(),array_count)
+		auto chunk_count = m_Threads.size() > array_count ? array_count : m_Threads.size(); //min(m_Threads.Size(),array_count)
 		chunk_size = array_count / chunk_count;
 		auto remaining_chunk_size = array_count % chunk_count;
 		auto remaining_chunk_count = remaining_chunk_size / chunk_size;

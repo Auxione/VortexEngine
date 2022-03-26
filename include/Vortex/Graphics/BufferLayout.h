@@ -1,7 +1,4 @@
 #pragma once
-#include "Vortex/Memory/Memory.h"
-#include "Vortex/Containers/DynamicArray.h"
-
 #include "Vortex/Graphics/GraphicsEnum.h"
 
 namespace Vortex::Graphics {
@@ -14,8 +11,8 @@ namespace Vortex::Graphics {
 			bool Normalized;
 		};
 
-		using iterator = DynamicArray<BufferElement>::iterator;
-		using const_iterator = DynamicArray<BufferElement>::const_iterator;
+		using iterator = std::vector<BufferElement>::iterator;
+		using const_iterator = std::vector<BufferElement>::const_iterator;
 
 	public:
 		BufferLayout()
@@ -46,7 +43,7 @@ namespace Vortex::Graphics {
 		BufferElement& operator[](SizeType index) { return m_Elements[index]; }
 		const BufferElement& operator[](SizeType index) const { return m_Elements[index]; }
 
-		SizeType Count() const { return m_Elements.Capacity(); }
+		SizeType Count() const { return m_Elements.capacity(); }
 		SizeType GetStride() const { return m_Stride; }
 
 		SizeType CalculateBufferSize(SizeType count) const { return count * GetStride(); }
@@ -62,6 +59,6 @@ namespace Vortex::Graphics {
 
 	private:
 		SizeType m_Stride;
-		DynamicArray<BufferElement> m_Elements;
+		std::vector<BufferElement> m_Elements;
 	};
 }

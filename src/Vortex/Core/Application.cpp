@@ -18,13 +18,13 @@ namespace Vortex {
 		do {
 			frame_timer.Start();
 
-			while (!m_EventQueue.Empty()) {
-				auto& event = m_EventQueue.Front();
+			while (!m_EventQueue.empty()) {
+				auto& event = m_EventQueue.front();
 				OnEvent(event);
 				if (event.Type == EventType::ApplicationClose) {
 					running = false;
 				}
-				m_EventQueue.Pop();
+				m_EventQueue.pop();
 			}
 
 			OnUpdate(frame_timer.Get());

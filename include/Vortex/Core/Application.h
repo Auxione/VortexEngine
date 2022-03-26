@@ -1,7 +1,8 @@
 #pragma once
+#include <queue>
+
 #include "Vortex/Core/Event.h"
 #include "Vortex/Common/Timer.h"
-#include "Vortex/Containers/Queue.h"
 
 namespace Vortex {
 	class Application {
@@ -19,14 +20,14 @@ namespace Vortex {
 
 		inline static void EventCallback(const Event& event) {
 			VORTEX_ASSERT(s_Instance != nullptr)
-			s_Instance->m_EventQueue.Emplace(event);
+			s_Instance->m_EventQueue.emplace(event);
 		}
 
 	protected:
 		Application() = default;
 
 		static Application* s_Instance;
-		Queue<Event> m_EventQueue;
+		std::queue<Event> m_EventQueue;
 
 	public:
 		virtual ~Application() = default;

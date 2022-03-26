@@ -3,10 +3,8 @@
 #include <future>
 #include <condition_variable>
 #include <utility>
-
-#include "Vortex/Memory/HeapAllocator.h"
-#include "Vortex/Containers/Vector.h"
-#include "Vortex/Containers/Queue.h"
+#include <vector>
+#include <queue>
 
 namespace Vortex {
 	struct ThreadPoolJob {
@@ -80,26 +78,26 @@ namespace Vortex {
 
 	public:
 		template<typename T, typename ... Args>
-		ThreadPool& EmplaceJob(Args&& ... args) {
+		inline ThreadPool& EmplaceJob(Args&& ... args) {
 			std::unique_lock<std::mutex> lock{m_Mutex};
-			m_JobQueue.Emplace(GetHeapAllocator()->New<T>(args...));
+			m_JobQueue.emplace(new T(std::forward<Args...>(args)...));
 			return *this;
 		}
 
 		template<typename T>
-		ThreadPool& PushJob(T* job) {
+		inline ThreadPool& PushJob(T* job) {
 			std::unique_lock<std::mutex> lock{m_Mutex};
-			m_JobQueue.Emplace(job);
+			m_JobQueue.emplace(job);
 			return *this;
 		}
 
 	public:
-		ThreadPool& DoTask(const SingleTaskJobFn& job_fn) {
+		inline ThreadPool& DoTask(const SingleTaskJobFn& job_fn) {
 			return EmplaceJob<SingleTaskJob>(job_fn);
 		}
 
 		template<typename T>
-		ThreadPool& Foreach(T* array, SizeType count, const ParallelJobFn<T>& foreach_fn) {
+		inline ThreadPool& Foreach(T* array, SizeType count, const ParallelJobFn<T>& foreach_fn) {
 			SizeType job_count;
 			SizeType chunk_size;
 			SplitForEach(count, chunk_size, job_count);
@@ -107,13 +105,13 @@ namespace Vortex {
 			std::unique_lock<std::mutex> lock{m_Mutex};
 			for (SizeType i = 0; i < job_count; ++i) {
 				auto start_index = i * chunk_size;
-				m_JobQueue.Emplace(new ParallelForJob<T>(array, start_index, chunk_size, foreach_fn));
+				m_JobQueue.emplace(new ParallelForJob<T>(array, start_index, chunk_size, foreach_fn));
 			}
 			return *this;
 		}
 
 		template<typename T>
-		ThreadPool& Foreach(Vector<T>& vector, const ParallelJobFn<T>& foreach_fn) {
+		inline ThreadPool& Foreach(std::vector<T>& vector, const ParallelJobFn<T>& foreach_fn) {
 			return Foreach(vector.Data(), vector.Size(), foreach_fn);
 		}
 /*
@@ -135,14 +133,14 @@ namespace Vortex {
 		void Clear();
 
 	protected:
-		inline bool ThreadWaitFn() { return m_ActiveJobCount == 0 && m_JobQueue.Empty(); }
-		inline bool StateWaitFn() { return !m_Running || !m_JobQueue.Empty(); }
+		inline bool ThreadWaitFn() { return m_ActiveJobCount == 0 && m_JobQueue.empty(); }
+		inline bool StateWaitFn() { return !m_Running || !m_JobQueue.empty(); }
 
 		void SplitForEach(SizeType array_count, SizeType& chunk_size, SizeType& job_count);
 
 	protected:
-		Vector<std::thread> m_Threads;
-		Queue<ThreadPoolJob*> m_JobQueue;
+		std::vector<std::thread> m_Threads;
+		std::queue<ThreadPoolJob*> m_JobQueue;
 
 		std::mutex m_Mutex;
 

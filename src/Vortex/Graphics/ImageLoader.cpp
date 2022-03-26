@@ -22,13 +22,16 @@ namespace Vortex {
 		const char* file_name = file.c_str();
 
 		int w, h, c;
-		UByte* loaded_img_data = stbi_load(file_name, &w, &h, &c, 0);
-
+		UInt8* loaded_img_data = stbi_load(file_name, &w, &h, &c, 0);
 		if (loaded_img_data != nullptr) {
 			data.Size[0] = w;
 			data.Size[1] = h;
 			data.Channels = STB::Format[c];
-			data.Pixels.Set(loaded_img_data, w * h * c);
+			data.Pixels.insert(
+				data.Pixels.begin(),
+				loaded_img_data,
+				loaded_img_data + w * h * c
+			);
 
 			stbi_image_free(loaded_img_data);
 			VORTEX_LOG_INFO("[ImageLoader] Loaded from: %s.", file_name);
@@ -51,7 +54,11 @@ namespace Vortex {
 			data.Size[0] = w;
 			data.Size[1] = h;
 			data.Channels = STB::Format[c];
-			data.Pixels.Set(loaded_img_data, w * h * c);
+			data.Pixels.insert(
+				data.Pixels.begin(),
+				loaded_img_data,
+				loaded_img_data + w * h * c
+			);
 
 			stbi_image_free(loaded_img_data);
 			VORTEX_LOG_INFO("[ImageLoader] Loaded from: %s.", file_name);
