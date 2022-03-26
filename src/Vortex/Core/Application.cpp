@@ -12,11 +12,11 @@ namespace Vortex {
 
 		OnStart();
 
-		Timer<float> delta_timer;
+		Timer<float> frame_timer;
 		bool running = true;
 
 		do {
-			delta_timer.Start();
+			frame_timer.Start();
 
 			while (!m_EventQueue.Empty()) {
 				auto& event = m_EventQueue.Front();
@@ -27,9 +27,9 @@ namespace Vortex {
 				m_EventQueue.Pop();
 			}
 
-			OnUpdate(delta_timer.Get());
+			OnUpdate(frame_timer.Get());
 
-			delta_timer.Stop();
+			frame_timer.Stop();
 		} while (running);
 
 		OnStop();
