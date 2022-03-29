@@ -30,14 +30,20 @@ namespace Vortex::Math {
 	inline static Int32 CeilToInt(float value) { return static_cast<Int32>(std::ceil(value)); }
 	inline static Int32 FloorToInt(float value) { return static_cast<Int32>(std::floor(value)); }
 
-	constexpr float Min(float v1, float v2) { return v1 > v2 ? v2 : v1; }
-	constexpr float Max(float v1, float v2) { return v1 < v2 ? v2 : v1; }
-	constexpr float Lerp(float start, float stop, float ratio) { return start + (stop - start) * ratio; }
-	constexpr float Normalize(float value, float start, float stop) { return (value - start) / (stop - start); }
-	constexpr float Map(float value, float value_min, float value_max, float output_min, float output_max) {
+	template<typename T>
+	constexpr T Min(T v1, T v2) { return v1 > v2 ? v2 : v1; }
+	template<typename T>
+	constexpr T Max(T v1, T v2) { return v1 < v2 ? v2 : v1; }
+	template<typename T>
+	constexpr T Lerp(T start, T stop, T ratio) { return start + (stop - start) * ratio; }
+	template<typename T>
+	constexpr T Normalize(T value, T start, T stop) { return (value - start) / (stop - start); }
+	template<typename T>
+	constexpr T Map(T value, T value_min, T value_max, T output_min, T output_max) {
 		return output_min + (output_max - output_min) * ((value - value_min) / (value_max - value_min));
 	}
-	constexpr float Clamp(float value, float min, float max) {
+	template<typename T>
+	constexpr T Clamp(T value, T min, T max) {
 		if (value > max) {
 			return max;
 		} else if (value < min) {
@@ -46,6 +52,13 @@ namespace Vortex::Math {
 			return value;
 		}
 	}
+
+	template<>
+	inline float Min<float>(float v1, float v2) { return std::min(v1, v2); }
+	template<>
+	inline float Max<float>(float v1, float v2) { return std::max(v1, v2); }
+	template<>
+	inline float Clamp(float value, float min, float max) { return std::clamp(value, min, max); }
 
 	template<typename T>
 	constexpr bool IsEven(T value) {
@@ -86,6 +99,7 @@ namespace Vortex {
 	struct Vector2: public BasicVector<2, float> {
 		using Vortex::BasicVector<2, float>::BasicVector;
 		using Vortex::BasicVector<2, float>::operator=;
+		using Vortex::BasicVector<2, float>::operator[];
 
 		using Vortex::BasicVector<2, float>::operator+;
 		using Vortex::BasicVector<2, float>::operator-;
@@ -104,6 +118,11 @@ namespace Vortex {
 		using Vortex::BasicVector<2, float>::Dot;
 		using Vortex::BasicVector<2, float>::Reflect;
 		using Vortex::BasicVector<2, float>::Distance;
+
+		constexpr Vector2(const Vortex::BasicVector<2, float>& other)
+			: Vortex::BasicVector<2, float>(other) {}
+		constexpr Vector2(Vortex::BasicVector<2, float>&& other)
+			: Vortex::BasicVector<2, float>(other) {}
 
 		constexpr Vector2(float x, float y): Vortex::BasicVector<2, float>() {
 			m_Data[0] = x;
@@ -135,6 +154,7 @@ namespace Vortex {
 	struct Vector2Int: public BasicVector<2, Int32> {
 		using Vortex::BasicVector<2, Int32>::BasicVector;
 		using Vortex::BasicVector<2, Int32>::operator=;
+		using Vortex::BasicVector<2, Int32>::operator[];
 
 		using Vortex::BasicVector<2, Int32>::operator+;
 		using Vortex::BasicVector<2, Int32>::operator-;
@@ -154,7 +174,13 @@ namespace Vortex {
 		using Vortex::BasicVector<2, Int32>::Reflect;
 		using Vortex::BasicVector<2, Int32>::Distance;
 
-		constexpr Vector2Int(Int32 x, Int32 y): Vortex::BasicVector<2, Int32>() {
+		constexpr Vector2Int(const Vortex::BasicVector<2, Int32>& other)
+			: Vortex::BasicVector<2, Int32>(other) {}
+		constexpr Vector2Int(Vortex::BasicVector<2, Int32>&& other) noexcept
+			: Vortex::BasicVector<2, Int32>(other) {}
+
+		constexpr Vector2Int(Int32 x, Int32 y)
+			: Vortex::BasicVector<2, Int32>() {
 			m_Data[0] = x;
 			m_Data[1] = y;
 		}
@@ -184,6 +210,7 @@ namespace Vortex {
 	struct Vector3: public BasicVector<3, float> {
 		using Vortex::BasicVector<3, float>::BasicVector;
 		using Vortex::BasicVector<3, float>::operator=;
+		using Vortex::BasicVector<3, float>::operator[];
 
 		using Vortex::BasicVector<3, float>::operator+;
 		using Vortex::BasicVector<3, float>::operator-;
@@ -203,7 +230,13 @@ namespace Vortex {
 		using Vortex::BasicVector<3, float>::Reflect;
 		using Vortex::BasicVector<3, float>::Distance;
 
-		constexpr Vector3(float x, float y, float z): Vortex::BasicVector<3, float>() {
+		constexpr Vector3(const Vortex::BasicVector<3, float>& other)
+			: Vortex::BasicVector<3, float>(other) {}
+		constexpr Vector3(Vortex::BasicVector<3, float>&& other) noexcept
+			: Vortex::BasicVector<3, float>(other) {}
+
+		constexpr Vector3(float x, float y, float z)
+			: Vortex::BasicVector<3, float>() {
 			m_Data[0] = x;
 			m_Data[1] = y;
 			m_Data[2] = z;
@@ -247,6 +280,7 @@ namespace Vortex {
 	struct Vector3Int: public BasicVector<3, Int32> {
 		using Vortex::BasicVector<3, Int32>::BasicVector;
 		using Vortex::BasicVector<3, Int32>::operator=;
+		using Vortex::BasicVector<3, Int32>::operator[];
 
 		using Vortex::BasicVector<3, Int32>::operator+;
 		using Vortex::BasicVector<3, Int32>::operator-;
@@ -266,7 +300,13 @@ namespace Vortex {
 		using Vortex::BasicVector<3, Int32>::Reflect;
 		using Vortex::BasicVector<3, Int32>::Distance;
 
-		constexpr Vector3Int(Int32 x, Int32 y, Int32 z): Vortex::BasicVector<3, Int32>() {
+		constexpr Vector3Int(const Vortex::BasicVector<3, Int32>& other)
+			: Vortex::BasicVector<3, Int32>(other) {}
+		constexpr Vector3Int(Vortex::BasicVector<3, Int32>&& other) noexcept
+			: Vortex::BasicVector<3, Int32>(other) {}
+
+		constexpr Vector3Int(Int32 x, Int32 y, Int32 z)
+			: Vortex::BasicVector<3, Int32>() {
 			m_Data[0] = x;
 			m_Data[1] = y;
 			m_Data[2] = z;
@@ -309,6 +349,7 @@ namespace Vortex {
 	struct Vector4: public BasicVector<4, float> {
 		using Vortex::BasicVector<4, float>::BasicVector;
 		using Vortex::BasicVector<4, float>::operator=;
+		using Vortex::BasicVector<4, float>::operator[];
 
 		using Vortex::BasicVector<4, float>::operator+;
 		using Vortex::BasicVector<4, float>::operator-;
@@ -328,7 +369,13 @@ namespace Vortex {
 		using Vortex::BasicVector<4, float>::Reflect;
 		using Vortex::BasicVector<4, float>::Distance;
 
-		constexpr Vector4(float x, float y, float z, float w): Vortex::BasicVector<4, float>() {
+		constexpr Vector4(const Vortex::BasicVector<4, float>& other)
+			: Vortex::BasicVector<4, float>(other) {}
+		constexpr Vector4(Vortex::BasicVector<4, float>&& other) noexcept
+			: Vortex::BasicVector<4, float>(other) {}
+
+		constexpr Vector4(float x, float y, float z, float w)
+			: Vortex::BasicVector<4, float>() {
 			m_Data[0] = x;
 			m_Data[1] = y;
 			m_Data[2] = z;
@@ -369,6 +416,7 @@ namespace Vortex {
 	struct Vector4Int: public BasicVector<4, Int32> {
 		using Vortex::BasicVector<4, Int32>::BasicVector;
 		using Vortex::BasicVector<4, Int32>::operator=;
+		using Vortex::BasicVector<4, Int32>::operator[];
 
 		using Vortex::BasicVector<4, Int32>::operator+;
 		using Vortex::BasicVector<4, Int32>::operator-;
@@ -388,7 +436,13 @@ namespace Vortex {
 		using Vortex::BasicVector<4, Int32>::Reflect;
 		using Vortex::BasicVector<4, Int32>::Distance;
 
-		constexpr Vector4Int(Int32 x, Int32 y, Int32 z, Int32 w): Vortex::BasicVector<4, Int32>() {
+		constexpr Vector4Int(const Vortex::BasicVector<4, Int32>& other)
+			: Vortex::BasicVector<4, Int32>(other) {}
+		constexpr Vector4Int(Vortex::BasicVector<4, Int32>&& other) noexcept
+			: Vortex::BasicVector<4, Int32>(other) {}
+
+		constexpr Vector4Int(Int32 x, Int32 y, Int32 z, Int32 w)
+			: Vortex::BasicVector<4, Int32>() {
 			m_Data[0] = x;
 			m_Data[1] = y;
 			m_Data[2] = z;
@@ -425,6 +479,7 @@ namespace Vortex {
 	struct Color: public BasicVector<4, float> {
 		using Vortex::BasicVector<4, float>::BasicVector;
 		using Vortex::BasicVector<4, float>::operator=;
+		using Vortex::BasicVector<4, float>::operator[];
 
 		using Vortex::BasicVector<4, float>::operator+;
 		using Vortex::BasicVector<4, float>::operator-;
@@ -446,7 +501,13 @@ namespace Vortex {
 		constexpr const float& Alpha() const { return m_Data[3]; }
 
 	public:
-		constexpr Color(float x, float y, float z, float w): Vortex::BasicVector<4, float>() {
+		constexpr Color(const Vortex::BasicVector<4, float>& other)
+			: Vortex::BasicVector<4, float>(other) {}
+		constexpr Color(Vortex::BasicVector<4, float>&& other)
+			: Vortex::BasicVector<4, float>(other) {}
+
+		constexpr Color(float x, float y, float z, float w)
+			: Vortex::BasicVector<4, float>() {
 			m_Data[0] = x;
 			m_Data[1] = y;
 			m_Data[2] = z;
@@ -529,8 +590,14 @@ namespace Vortex {
 	struct Matrix2: public BasicMatrix<2, 2, float> {
 		using Vortex::BasicMatrix<2, 2, float>::BasicMatrix;
 		using Vortex::BasicMatrix<2, 2, float>::operator=;
+		using Vortex::BasicMatrix<2, 2, float>::operator[];
 
 	public:
+		constexpr Matrix2(const Vortex::BasicMatrix<2, 2, float>& other)
+			: Vortex::BasicMatrix<2, 2, float>(other) {}
+		constexpr Matrix2(Vortex::BasicMatrix<2, 2, float>&& other)
+			: Vortex::BasicMatrix<2, 2, float>(other) {}
+
 		constexpr Matrix2()
 			: Vortex::BasicMatrix<2, 2, float>() {
 			m_Data[0] = 1.0f;
@@ -578,6 +645,13 @@ namespace Vortex {
 	struct Matrix3: public BasicMatrix<3, 3, float> {
 		using Vortex::BasicMatrix<3, 3, float>::BasicMatrix;
 		using Vortex::BasicMatrix<3, 3, float>::operator=;
+		using Vortex::BasicMatrix<3, 3, float>::operator[];
+
+	public:
+		constexpr Matrix3(const Vortex::BasicMatrix<3, 3, float>& other)
+			: Vortex::BasicMatrix<3, 3, float>(other) {}
+		constexpr Matrix3(Vortex::BasicMatrix<3, 3, float>&& other)
+			: Vortex::BasicMatrix<3, 3, float>(other) {}
 
 		constexpr Matrix3()
 			: Vortex::BasicMatrix<3, 3, float>() {
@@ -653,6 +727,13 @@ namespace Vortex {
 	struct Matrix4: public BasicMatrix<4, 4, float> {
 		using Vortex::BasicMatrix<4, 4, float>::BasicMatrix;
 		using Vortex::BasicMatrix<4, 4, float>::operator=;
+		using Vortex::BasicMatrix<4, 4, float>::operator[];
+
+	public:
+		constexpr Matrix4(const Vortex::BasicMatrix<4, 4, float>& other)
+			: Vortex::BasicMatrix<4, 4, float>(other) {}
+		constexpr Matrix4(Vortex::BasicMatrix<4, 4, float>&& other)
+			: Vortex::BasicMatrix<4, 4, float>(other) {}
 
 		constexpr Matrix4()
 			: Vortex::BasicMatrix<4, 4, float>() {
@@ -732,21 +813,21 @@ namespace Vortex {
 		bool Invert();
 		void Transpose();
 
-		void SetPerspective(const Angle& angle, float aspect_ratio, float near, float far);
+		void SetPerspective(Angle angle, float aspect_ratio, float near, float far);
 		void SetOrthographic(float left, float right, float bottom, float top, float near = -1.0f, float far = 1.0f);
 
-		void SetAngleAxis(const Angle& angle, const Vector3& axis);
+		void SetAngleAxis(Angle angle, const Vector3& axis);
 		//void SetRotation(const Quaternion& quaternion);
-		void SetRotationXYZ(const Angle& x, const Angle& y, const Angle& z);
-		void SetRotationX(const Angle& angle);
-		void SetRotationY(const Angle& angle);
-		void SetRotationZ(const Angle& angle);
+		void SetRotationXYZ(Angle x, Angle y, Angle z);
+		void SetRotationX(Angle angle);
+		void SetRotationY(Angle angle);
+		void SetRotationZ(Angle angle);
 		void SetLookAt(const Vector3& position, const Vector3& target, const Vector3& upwards);
 
-		void SetTranslation(const float* vector);
-		void ExtractTranslation(float* vector) const;
+		void SetTranslation(const Vector3& vector);
+		void ExtractTranslation(Vector3& vector) const;
 		//bool ExtractRotation(Quaternion& angle) const;
-		void TransformPosition(float* vector) const;
-		void TransformDirection(float* vector) const;
+		void TransformPosition(Vector3& vector) const;
+		void TransformDirection(Vector3& vector) const;
 	};
 }
