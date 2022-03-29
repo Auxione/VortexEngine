@@ -1,6 +1,6 @@
 #pragma once
 #include "Vortex/Memory/Memory.h"
-#include "Vortex/Debug/Assert.h"
+#include "Vortex/Math/BasicVector.h"
 
 namespace Vortex {
 	template<typename T>
@@ -12,10 +12,12 @@ namespace Vortex {
 		constexpr const T& y() const { return m_Data[1]; }
 		constexpr const T& r() const { return m_Data[2]; }
 
-		constexpr operator T*() { return m_Data; }
-		constexpr operator const T*() const { return m_Data; }
+		constexpr T* Data() { return m_Data; }
+		constexpr const T* Data() const { return m_Data; }
 
 	public:
+		constexpr BasicCircle()
+			: m_Data{} {}
 		constexpr BasicCircle(T x, T y, T radius)
 			: m_Data{x, y, radius} {}
 		constexpr BasicCircle(const T* values)
@@ -23,7 +25,7 @@ namespace Vortex {
 		inline ~BasicCircle() = default;
 
 	public:
-		constexpr bool Contains(const T* point) const {
+		constexpr bool Contains(const BasicVector<2, T>& point) const {
 			T dx = m_Data[0] - point[0];
 			T dy = m_Data[1] - point[1];
 			return dx * dx + dy * dy < r() * r();

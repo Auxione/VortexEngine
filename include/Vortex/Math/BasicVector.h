@@ -12,14 +12,21 @@ namespace Vortex {
 	template<SizeType Count, typename T>
 	struct BasicVector {
 		constexpr BasicVector() = default;
+		constexpr BasicVector(const BasicVector&) = default;
+		constexpr BasicVector(BasicVector&&) noexcept = default;
 		constexpr BasicVector(const T* data) { std::memcpy(m_Data, data, Count * sizeof(T)); };
 		inline ~BasicVector() = default;
 
 	public:
-		inline operator T*() { return m_Data; }
-		inline operator const T*() const { return m_Data; }
+		inline T* Data() { return m_Data; }
+		inline const T* Data() const { return m_Data; }
 
 	protected:
+		T& operator[](Vortex::SizeType i) { return m_Data[i]; }
+		const T& operator[](Vortex::SizeType i) const { return m_Data[i]; }
+		constexpr BasicVector& operator=(const BasicVector&) = default;
+		constexpr BasicVector& operator=(BasicVector&&) noexcept = default;
+
 #define VORTEX_BASICVECTOR_EQ_OP(op)                                                    \
         constexpr friend bool operator op(const BasicVector<Count, T>& lhs, const BasicVector<Count, T>& rhs)  {        \
             bool out{true};                                                                \

@@ -1,4 +1,6 @@
 #pragma once
+#include "Vortex/Memory/Memory.h"
+#include "Vortex/Math/BasicVector.h"
 
 namespace Vortex {
 	template<typename T>
@@ -17,14 +19,16 @@ namespace Vortex {
 		constexpr const T& x3() const { return m_Data[4]; }
 		constexpr const T& y3() const { return m_Data[5]; }
 
-		constexpr operator T*() { return m_Data; }
-		constexpr operator const T*() const { return m_Data; }
+		constexpr T* Data() { return m_Data; }
+		constexpr const T* Data() const { return m_Data; }
 
 	public:
-		constexpr BasicTriangle(const T* values)
-			: m_Data{values[0], values[1], values[2], values[3], values[4], values[5]} {}
+		constexpr BasicTriangle()
+			: m_Data{} {}
 		constexpr BasicTriangle(T x1, T y1, T x2, T y2, T x3, T y3)
 			: m_Data{x1, y1, x2, y2, x3, y3} {}
+		constexpr BasicTriangle(const T* values)
+			: m_Data{values[0], values[1], values[2], values[3], values[4], values[5]} {}
 		inline ~BasicTriangle() = default;
 
 	private:
@@ -33,7 +37,7 @@ namespace Vortex {
 		}
 
 	public:
-		constexpr bool Contains(const T* point) const {
+		constexpr bool Contains(const BasicVector<2, T>& point) const {
 			T d1 = Sign(point[0], point[1], m_Data[0], m_Data[1], m_Data[2], m_Data[3]);
 			T d2 = Sign(point[0], point[1], m_Data[2], m_Data[3], m_Data[4], m_Data[5]);
 			T d3 = Sign(point[0], point[1], m_Data[4], m_Data[5], m_Data[0], m_Data[1]);

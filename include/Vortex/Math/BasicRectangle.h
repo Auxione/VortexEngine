@@ -1,4 +1,6 @@
 #pragma once
+#include "Vortex/Memory/Memory.h"
+#include "Vortex/Math/BasicVector.h"
 
 namespace Vortex {
 	//Axis-Aligned Rectangle class
@@ -14,10 +16,12 @@ namespace Vortex {
 		constexpr const T& Width() const { return m_Data[2]; }
 		constexpr const T& Height() const { return m_Data[3]; }
 
-		constexpr operator T*() { return m_Data; }
-		constexpr operator const T*() const { return m_Data; }
+		constexpr T* Data() { return m_Data; }
+		constexpr const T* Data() const { return m_Data; }
 
 	public:
+		constexpr BasicRectangle()
+			: m_Data{} {}
 		constexpr BasicRectangle(const T* values)
 			: m_Data{values[0], values[1], values[2], values[3]} {}
 		constexpr BasicRectangle(T x, T y, T width, T height)
@@ -26,7 +30,7 @@ namespace Vortex {
 		inline ~BasicRectangle() = default;
 
 	public:
-		constexpr bool Contains(const T* point) const {
+		constexpr bool Contains(const Vortex::BasicVector<2, T>& point) const {
 			return point[0] >= x()
 				&& point[0] <= x() + Width()
 				&& point[1] >= y()
