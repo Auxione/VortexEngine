@@ -1,6 +1,7 @@
 #pragma once
 #include "Vortex/Core/Keycode.h"
 #include "Vortex/Memory/Memory.h"
+#include "Vortex/Math/VortexMath.h"
 
 namespace Vortex {
 	struct EventType {
@@ -74,8 +75,8 @@ namespace Vortex {
 			KeyCode::Enum Keycode;
 			UInt16 Character;
 			MouseButton::Enum Button;
-			float Position[2];
-			Int32 Size[2];
+			Vector2 Position;
+			Vector2Int Size;
 
 			struct {
 				SizeType Count;
