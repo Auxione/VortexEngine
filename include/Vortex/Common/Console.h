@@ -1,8 +1,9 @@
 #pragma once
+#include <filesystem>
 #include <vector>
 #include <shared_mutex>
 
-#include "Vortex/Common/Singleton.h"
+#include "Vortex/Common/ThreadSafeRW.h"
 
 namespace Vortex {
 	namespace EntryType {
@@ -45,8 +46,19 @@ namespace Vortex {
 		}
 
 	public:
-		explicit Console();
+		explicit Console(std::filesystem::path file_path = "log.txt", SizeType max_value = 20);
 		~Console();
+
+	public:
+		inline void SetLogFilePath(const std::filesystem::path& file_path) {
+			std::unique_lock write_lock{m_Mutex};
+			m_LogFilePath = file_path;
+		}
+		inline void SetLogFileBufferEntryCount(SizeType max_value) {
+			std::unique_lock write_lock{m_Mutex};
+			m_LogFileBufferEntryCount = max_value;
+		}
+		void Flush();
 
 	public:
 		void Write(EntryType::Enum type, const char* log);
@@ -57,6 +69,8 @@ namespace Vortex {
 			sprintf_s(buffer, 512, format, args...);
 			Write(type, buffer);
 		}
+
+		ThreadSafeReader<ContainerType> GetEntries() const { return {m_Mutex, &m_Entries}; }
 
 	public:
 		template<typename ...Args>
@@ -77,20 +91,18 @@ namespace Vortex {
 		}
 
 	public:
-		std::shared_lock<std::shared_mutex> GetSharedLock() {
-			return std::shared_lock<std::shared_mutex>{m_Mutex};
-		}
-		inline SizeType Size() const { return m_Entries.size(); }
-		inline const Console::Entry& Get(SizeType i) const { return m_Entries[i]; }
-
-	public:
 		inline SizeType GetTotalEntryCount() const { return m_TotalEntryCount; }
 
 	protected:
 		static Console* s_Instance;
 
 	protected:
+		std::filesystem::path m_LogFilePath;
+		SizeType m_LogFileBufferEntryCount;
+		ContainerType m_LogFileBuffer;
+
 		ContainerType m_Entries;
+
 		SizeType m_TotalEntryCount;
 		mutable std::shared_mutex m_Mutex;
 	};
