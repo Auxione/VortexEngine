@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <functional>
 
 #include "Vortex/Memory/Memory.h"
 
@@ -7,7 +8,7 @@ namespace Vortex {
 	template<typename ...Args>
 	class Signal {
 	public:
-		typedef void (* ReceiverFn)(Args...);
+		using ReceiverFn = std::function<void(Args...)>;
 		using Handle = SizeType;
 
 	public:
@@ -36,8 +37,8 @@ namespace Vortex {
 
 		inline void Clear() { m_Connections.Clear(); }
 
-		inline SizeType Size() const { return m_Connections.Size(); }
-		inline SizeType Empty() const { return m_Connections.Size() == 0; }
+		inline SizeType Size() const { return m_Connections.size(); }
+		inline SizeType Empty() const { return m_Connections.empty(); }
 		inline operator bool() const { return !Empty(); }
 
 	private:
