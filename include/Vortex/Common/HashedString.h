@@ -7,7 +7,9 @@ namespace Vortex {
 		template<SizeType N>
 		constexpr HashedString(const char (& str)[N]): m_Hash{FNV1Hasher::Hash<N>(str)} {}
 
-		HashedString(const char* str, SizeType length)
+		constexpr HashedString(): m_Hash{0} {}
+
+		inline HashedString(const char* str, SizeType length)
 			: m_Hash{FNV1Hasher::HashRuntime(str, length)} {
 			VORTEX_ASSERT(length > 0)
 		}
