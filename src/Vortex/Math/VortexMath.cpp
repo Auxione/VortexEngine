@@ -176,6 +176,16 @@ namespace Vortex {
 		std::swap(m_Data[5], m_Data[7]);
 	}
 
+	void Matrix3::SetTranslation(const Vector2& vector) {
+		m_Data[6] = vector[0];
+		m_Data[7] = vector[1];
+	}
+	void Matrix3::Translate(const Vector2& vector) {
+		m_Data[6] += vector[0];
+		m_Data[7] += vector[1];
+	}
+
+	//void Matrix3::SetRotation(const Quaternion& rotation) {}
 	void Matrix3::SetAngleAxis(const Angle& angle, const float* axis) {
 		float rad = angle.ToRadians();
 		float c = Math::Cos(rad);
@@ -253,7 +263,7 @@ namespace Vortex {
 	void Matrix3::SetLookAt(const Vector3& position, const Vector3& target, const Vector3& upwards) {
 		VORTEX_ASSERT_MSG(false, "Not tested.")
 		// compute forward vector and normalize
-		Vector3 forward{(target - position)};
+		Vector3 forward{target - position};
 		forward.Normalize();
 
 		Vector3 up;             // up vector of object
@@ -280,37 +290,30 @@ namespace Vortex {
 		m_Data[8] = forward.z();
 	}
 
-	void Matrix3::SetTranslation(const float* vector) {
-		m_Data[6] = vector[0];
-		m_Data[7] = vector[1];
+	void Matrix3::Scale(const Vector3& vector) {
+		m_Data[0] *= vector[0];
+		m_Data[4] *= vector[1];
+		m_Data[8] *= vector[2];
 	}
-	void Matrix3::ExtractTranslation(float* vector) const {
+
+	void Matrix3::ExtractTranslation(Vector2& vector) const {
 		vector[0] = m_Data[6];
 		vector[1] = m_Data[7];
 	}
-	bool Matrix3::ExtractRotation(Angle& angle) const {
-		if (!Math::Compare(m_Data[0], m_Data[3])
-			|| !Math::Compare(m_Data[1], -m_Data[2])) {
-			return false;
-		}
-		angle.SetRadians(Math::Acos(m_Data[0]));
-		return true;
-	}
-	void Matrix3::TransformPosition(float* vector) const {
+	//bool ExtractRotation(Quaternion& angle) const;
+
+	void Matrix3::TransformPosition(Vector2& vector) const {
 		float temp[2];
 		temp[0] = m_Data[0] * vector[0] + m_Data[3] * vector[1] + m_Data[6];
 		temp[1] = m_Data[1] * vector[0] + m_Data[4] * vector[1] + m_Data[7];
-		std::memcpy(vector, temp, 2 * sizeof(float));
+		vector.Set(temp[0], temp[1]);
 	}
-	void Matrix3::TransformDirection(float* vector) const {
+	void Matrix3::TransformDirection(Vector2& vector) const {
 		float temp[2];
 		temp[0] = m_Data[0] * vector[0] + m_Data[3] * vector[1];
 		temp[1] = m_Data[1] * vector[0] + m_Data[4] * vector[1];
-		std::memcpy(vector, temp, 2 * sizeof(float));
+		vector.Set(temp[0], temp[1]);
 	}
-
-	//void Matrix3::SetRotation(const Quaternion& rotation) {
-	//}
 }
 
 namespace Vortex {
@@ -476,7 +479,7 @@ namespace Vortex {
 		std::swap(m_Data[11], m_Data[14]);
 	}
 
-	void Matrix4::SetPerspective(const Angle& angle, float aspect_ratio, float near, float far) {
+	void Matrix4::SetPerspective(Angle angle, float aspect_ratio, float near, float far) {
 		float cot = 1.0f / Math::Tan(0.5f * angle.ToRadians());
 
 		m_Data[0] = cot / aspect_ratio;
@@ -502,7 +505,18 @@ namespace Vortex {
 		m_Data[15] = 1.0f;
 	}
 
-	void Matrix4::SetAngleAxis(const Angle& angle, const Vector3& axis) {
+	void Matrix4::SetTranslation(const Vector3& vector) {
+		m_Data[12] = vector[0];
+		m_Data[13] = vector[1];
+		m_Data[14] = vector[2];
+	}
+	void Matrix4::Translate(const Vector3& vector) {
+		m_Data[12] += vector[0];
+		m_Data[13] += vector[1];
+		m_Data[14] += vector[2];
+	}
+
+	void Matrix4::SetAngleAxis(Angle angle, const Vector3& axis) {
 		float rad = angle.ToRadians();
 		float c = Math::Cos(rad);
 		float s = Math::Sin(rad);
@@ -520,8 +534,8 @@ namespace Vortex {
 		m_Data[9] = axis[1] * axis[2] * omc - axis[0] * s;
 		m_Data[10] = axis[2] * axis[2] * omc + c;
 	}
-	//void Matrix4::SetRotation(const Quaternion& quaternion);
-	void Matrix4::SetRotationXYZ(const Angle& x, const Angle& y, const Angle& z) {
+	//void Matrix4::SetRotation(const Quaternion& quaternion){}
+	void Matrix4::SetRotationXYZ(Angle x, Angle y, Angle z) {
 		float cos_x = Math::Cos(x.ToRadians());
 		float sin_x = Math::Sin(x.ToRadians());
 
@@ -543,7 +557,7 @@ namespace Vortex {
 		m_Data[9] = cos_x * sin_y * sin_z + sin_x * cos_z;
 		m_Data[10] = cos_x * cos_y;
 	}
-	void Matrix4::SetRotationX(const Angle& angle) {
+	void Matrix4::SetRotationX(Angle angle) {
 		float cos_gamma = Math::Cos(angle.ToRadians());
 		float sin_gamma = Math::Sin(angle.ToRadians());
 
@@ -555,7 +569,7 @@ namespace Vortex {
 		m_Data[9] = -sin_gamma;
 		m_Data[10] = cos_gamma;
 	}
-	void Matrix4::SetRotationY(const Angle& angle) {
+	void Matrix4::SetRotationY(Angle angle) {
 		float cos_beta = Math::Cos(angle.ToRadians());
 		float sin_beta = Math::Sin(angle.ToRadians());
 
@@ -567,7 +581,7 @@ namespace Vortex {
 		m_Data[8] = sin_beta;
 		m_Data[10] = cos_beta;
 	}
-	void Matrix4::SetRotationZ(const Angle& angle) {
+	void Matrix4::SetRotationZ(Angle angle) {
 		float cos_alpha = Math::Cos(angle.ToRadians());
 		float sin_alpha = Math::Sin(angle.ToRadians());
 
@@ -582,19 +596,20 @@ namespace Vortex {
 		VORTEX_ASSERT_MSG(false, "Not tested.")
 	}
 
-	void Matrix4::SetTranslation(const float* vector) {
-		m_Data[12] = vector[0];
-		m_Data[13] = vector[1];
-		m_Data[14] = vector[2];
+	void Matrix4::Scale(const Vector3& vector) {
+		m_Data[0] *= vector[0];
+		m_Data[5] *= vector[1];
+		m_Data[10] *= vector[2];
 	}
-	void Matrix4::ExtractTranslation(float* vector) const {
+
+	void Matrix4::ExtractTranslation(Vector3& vector) const {
 		vector[0] = m_Data[12];
 		vector[1] = m_Data[13];
 		vector[2] = m_Data[14];
 	}
-	//bool ExtractRotation(Quaternion& angle) const;
+	//bool Matrix4::ExtractRotation(Quaternion& angle) const{}
 
-	void Matrix4::TransformPosition(float* vector) const {
+	void Matrix4::TransformPosition(Vector3& vector) const {
 		// |0  4  8  12|   |x|
 		// |1  5  9  13|   |y|
 		// |2  6 10  14| * |z|
@@ -604,10 +619,9 @@ namespace Vortex {
 		temp[1] = m_Data[1] * vector[0] + m_Data[5] * vector[1] + m_Data[9] * vector[2] + m_Data[13];
 		temp[2] = m_Data[2] * vector[0] + m_Data[6] * vector[1] + m_Data[10] * vector[2] + m_Data[14];
 
-		std::memcpy(vector, temp, 3 * sizeof(float));
+		vector.Set(temp[0], temp[1], temp[2]);
 	}
-
-	void Matrix4::TransformDirection(float* vector) const {
+	void Matrix4::TransformDirection(Vector3& vector) const {
 		// |0  4  8  12|   |x|
 		// |1  5  9  13|   |y|
 		// |2  6 10  14| * |z|
@@ -616,7 +630,6 @@ namespace Vortex {
 		temp[0] = m_Data[0] * vector[0] + m_Data[4] * vector[1] + m_Data[8] * vector[2];
 		temp[1] = m_Data[1] * vector[0] + m_Data[5] * vector[1] + m_Data[9] * vector[2];
 		temp[2] = m_Data[2] * vector[0] + m_Data[6] * vector[1] + m_Data[10] * vector[2];
-
-		std::memcpy(vector, temp, 3 * sizeof(float));
+		vector.Set(temp[0], temp[1], temp[2]);
 	}
 }

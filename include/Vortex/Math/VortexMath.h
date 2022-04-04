@@ -551,6 +551,7 @@ namespace Vortex {
 			Green,
 			Yellow,
 			Red,
+			Orange,
 			Magenta,
 
 			VortexCustom,
@@ -709,6 +710,10 @@ namespace Vortex {
 		bool Invert();
 		void Transpose();
 
+		void SetTranslation(const Vector2& vector2);
+		void Translate(const Vector2& vector2);
+
+		//void SetRotation(const Quaternion& rotation);
 		void SetAngleAxis(const Angle& angle, const float* axis);
 		void SetRotationXYZ(const Angle& x, const Angle& y, const Angle& z);
 		void SetRotationX(const Angle& angle);
@@ -716,13 +721,13 @@ namespace Vortex {
 		void SetRotationZ(const Angle& angle);
 		void SetLookAt(const Vector3& position, const Vector3& target, const Vector3& upwards);
 
-		void SetTranslation(const float* vector);
-		void ExtractTranslation(float* vector) const;
-		bool ExtractRotation(Angle& angle) const;
-		void TransformPosition(float* vector) const;
-		void TransformDirection(float* vector) const;
+		void Scale(const Vector3& vector);
 
-		//void SetRotation(const Quaternion& rotation);
+		void ExtractTranslation(Vector2& vector2) const;
+		//bool ExtractRotation(Quaternion& angle) const;
+
+		void TransformPosition(Vector2& vector) const;
+		void TransformDirection(Vector2& vector) const;
 	};
 
 	struct Matrix4: public BasicMatrix<4, 4, float> {
@@ -817,6 +822,9 @@ namespace Vortex {
 		void SetPerspective(Angle angle, float aspect_ratio, float near, float far);
 		void SetOrthographic(float left, float right, float bottom, float top, float near = -1.0f, float far = 1.0f);
 
+		void SetTranslation(const Vector3& vector);
+		void Translate(const Vector3& vector);
+
 		void SetAngleAxis(Angle angle, const Vector3& axis);
 		//void SetRotation(const Quaternion& quaternion);
 		void SetRotationXYZ(Angle x, Angle y, Angle z);
@@ -825,9 +833,11 @@ namespace Vortex {
 		void SetRotationZ(Angle angle);
 		void SetLookAt(const Vector3& position, const Vector3& target, const Vector3& upwards);
 
-		void SetTranslation(const Vector3& vector);
+		void Scale(const Vector3& vector);
+
 		void ExtractTranslation(Vector3& vector) const;
 		//bool ExtractRotation(Quaternion& angle) const;
+
 		void TransformPosition(Vector3& vector) const;
 		void TransformDirection(Vector3& vector) const;
 	};
