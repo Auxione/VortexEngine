@@ -1,13 +1,13 @@
 #pragma once
 #include "Vortex/Memory/Memory.h"
-#include "Vortex/Common/Handle.h"
+#include "Vortex/Common/StrongHandle.h"
 #include "Vortex/Core/Event.h"
 
 namespace Vortex::Graphics {
 	struct MonitorData;
 	struct WindowData;
 
-	using MonitorHandle = Handle<MonitorData>;
+	using MonitorHandle = StrongHandle<MonitorData>;
 
 	struct WindowData {
 		String Title;
