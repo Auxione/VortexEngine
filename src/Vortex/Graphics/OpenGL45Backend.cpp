@@ -1,15 +1,17 @@
 #include <glad/glad.h>
-#include <filesystem>
+#include <GLFW/glfw3.h>
 
 #include "Vortex/Common/Logger.h"
-#include "Vortex/Memory/HeapAllocator.h"
+
 #include "OpenGL45Backend.h"
+#include "OpenGL45Enums.h"
 
 #ifdef VORTEX_DEBUG
   #define VORTEX_WRAP_GL_CALLS
 #endif
 
 #ifdef VORTEX_WRAP_GL_CALLS
+
 constexpr static const char* TranslateErrorCode(GLenum error) {
 	switch (error) {
 		default: return "Unknown opengl error";
@@ -21,11 +23,25 @@ constexpr static const char* TranslateErrorCode(GLenum error) {
 		case GL_NO_ERROR: return "GL_NO_ERROR";
 	}
 }
-
+constexpr static const char* GetFrameBufferStatus(GLenum error) {
+	switch (error) {
+		default: return "Unknown opengl error";
+		case GL_FRAMEBUFFER_COMPLETE  : return "GL_FRAMEBUFFER_COMPLETE";
+		case GL_FRAMEBUFFER_UNDEFINED : return "GL_FRAMEBUFFER_UNDEFINED";
+		case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT : return "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT";
+		case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT : return "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT";
+		case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER : return "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER";
+		case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER : return "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER";
+		case GL_FRAMEBUFFER_UNSUPPORTED  : return "GL_FRAMEBUFFER_UNSUPPORTED";
+		case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE   : return "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE";
+		case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS    : return "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS";
+	}
+}
 void ClearGLError() {
 	while (glGetError() != GL_NO_ERROR) {}
 }
 
+#include <filesystem>
 void LogGLError(const char* file, int line) {
 	GLenum error = glGetError();
 	while (error != GL_NO_ERROR) {
@@ -41,207 +57,12 @@ LogGLError(__FILE__,__LINE__)
 #define VORTEX_GL_CALL(x) x//TODO check only out of memory errors
 #endif
 
-namespace Vortex::OpenGL {
-	constexpr static GLint BufferUsage[]{
-		GL_STATIC_DRAW            // StaticDraw
-		, GL_STATIC_READ        // StaticRead
-		, GL_STATIC_COPY        // StaticCopy
-		, GL_DYNAMIC_DRAW        // DynamicDraw
-		, GL_DYNAMIC_READ        // DynamicRead
-		, GL_DYNAMIC_COPY        // DynamicCopy
-		, GL_STREAM_DRAW        // StreamDraw
-		, GL_STREAM_READ        // StreamRead
-		, GL_STREAM_COPY        // StreamCopy
-	};
-
-	constexpr static GLint Topology[]{
-		GL_TRIANGLES            // TriangleList
-		, GL_TRIANGLE_STRIP        // TriangleStrip
-		, GL_TRIANGLE_FAN        // TriangleFan
-		, GL_LINES                // LineList
-		, GL_LINE_STRIP            // LineStrip
-		, GL_POINTS                // PointList
-	};
-
-	constexpr static GLint ShaderType[]{
-		GL_VERTEX_SHADER        // Vertex
-		, GL_FRAGMENT_SHADER    // Fragment
-		, GL_GEOMETRY_SHADER    // Geometry
-		, GL_COMPUTE_SHADER        // Compute
-	};
-
-	constexpr static GLint TextureLODFilter[]{
-		GL_LINEAR                // Linear
-		, GL_NEAREST            // Nearest
-	};
-
-	constexpr static GLint TextureWrapType[]{
-		GL_REPEAT                // Repeat
-		, GL_MIRRORED_REPEAT    // RepeatMirrored
-		, GL_CLAMP_TO_BORDER    // ClampToBorder
-		, GL_CLAMP_TO_EDGE        // ClampToEdge
-	};
-
-	constexpr static GLint PixelFormatInternal[]{
-		GL_R8                    // Red_UI8
-		, GL_R8                    // Alpha_UI8
-		, GL_RGB8                // RGB_UI8
-		, GL_RGBA8            // RGBA_UI8
-		, GL_STENCIL_INDEX8        // Stencil_UI8
-		, GL_R32UI                // Red_UI32
-		, GL_R32UI                // Alpha_UI32
-		, GL_DEPTH_COMPONENT32F    // Depth_F32
-		, GL_R32F                // Red_F32
-		, GL_R32F                // Alpha_F32
-		, GL_RGB32F                // RGB_F32
-		, GL_RGBA32F            // RGBA_F32
-		, GL_DEPTH24_STENCIL8    // DepthStencil
-	};
-
-	constexpr static GLenum PixelFormat[]{
-		GL_RED                    // Red_UI8
-		, GL_RED                // Alpha_UI8
-		, GL_RGB                // RGB_UI8
-		, GL_RGBA                // RGBA_UI8
-		, GL_STENCIL_INDEX        // Stencil_UI8
-		, GL_RGBA_INTEGER        // Red_UI32
-		, GL_RGBA_INTEGER        // Alpha_UI32
-		, GL_DEPTH_COMPONENT    // Depth_F32
-		, GL_RED                // Red_F32
-		, GL_RED                // Alpha_F32
-		, GL_RGB                // RGB_F32
-		, GL_RGBA                // RGBA_F32
-		, GL_DEPTH_STENCIL        // DepthStencil
-	};
-
-	constexpr static GLenum PixelFormatType[]{
-		GL_UNSIGNED_BYTE        // Red_UI8
-		, GL_UNSIGNED_BYTE        // Alpha_UI8
-		, GL_UNSIGNED_BYTE        // RGB_UI8
-		, GL_UNSIGNED_BYTE        // RGBA_UI8
-		, GL_UNSIGNED_BYTE        // Stencil_UI8
-		, GL_UNSIGNED_INT        // Red_UI32
-		, GL_UNSIGNED_INT        // Alpha_UI32
-		, GL_FLOAT                // Depth_F32
-		, GL_FLOAT                // Red_F32
-		, GL_FLOAT                // Alpha_F32
-		, GL_FLOAT                // RGB_F32
-		, GL_FLOAT                // RGBA_F32
-		, GL_UNSIGNED_INT_24_8    // DepthStencil
-	};
-
-	constexpr static GLenum States[]{
-		GL_BLEND        // Blending
-		, GL_CULL_FACE      // FaceCulling
-		, GL_DEPTH_TEST      // DepthTest
-		, GL_MULTISAMPLE      // Multisampling
-		, GL_SCISSOR_TEST      // ScissorTest
-		, GL_STENCIL_TEST       // StencilTest
-		, GL_FALSE       // WireframeMode handled by SetState function
-	};
-	constexpr static GLenum FaceCulling[]{
-		GL_BACK    //Back
-		, GL_FRONT    //Front
-		, GL_FRONT_AND_BACK    //FrontAndBack
-	};
-
-	constexpr static GLenum DepthFunc[]{
-		GL_NEVER, //Never
-		GL_LESS, //Less
-		GL_LEQUAL, //LessEqual
-		GL_EQUAL, //Equal
-		GL_GEQUAL, //GreaterEqual
-		GL_GREATER, //Greater
-		GL_ALWAYS //Always
-	};
-
-	constexpr static GLenum FrameBufferAttachment[]{
-		GL_COLOR_ATTACHMENT0,        // Color
-		GL_DEPTH_ATTACHMENT,        // Depth
-		GL_STENCIL_ATTACHMENT,        // Stencil
-		GL_DEPTH_STENCIL_ATTACHMENT    // DepthStencil
-	};
-
-	constexpr static GLenum BlendFunc[]{
-		GL_ZERO
-		, GL_ONE
-		, GL_SRC_COLOR
-		, GL_ONE_MINUS_SRC_COLOR
-		, GL_DST_COLOR
-		, GL_ONE_MINUS_DST_COLOR
-		, GL_SRC_ALPHA
-		, GL_ONE_MINUS_SRC_ALPHA
-		, GL_DST_ALPHA
-		, GL_ONE_MINUS_DST_ALPHA
-		, GL_CONSTANT_COLOR
-		, GL_ONE_MINUS_CONSTANT_COLOR
-		, GL_CONSTANT_ALPHA
-		, GL_ONE_MINUS_CONSTANT_ALPHA
-	};
-
-	constexpr static GLenum RenderElementType[]{
-		GL_FLOAT,    //Float1
-		GL_FLOAT,    //Float2
-		GL_FLOAT,    //Float3
-		GL_FLOAT,    //Float4
-
-		0,            //FloatingTypeCount
-
-		GL_INT,        //Int1
-		GL_INT,        //Int2
-		GL_INT,        //Int3
-		GL_INT,        //Int4
-
-		GL_UNSIGNED_INT,    //UInt1
-		GL_UNSIGNED_INT,    //UInt2
-		GL_UNSIGNED_INT,    //UInt3
-		GL_UNSIGNED_INT,    //UInt4
-
-		GL_BYTE,        //Byte1
-		GL_BYTE,        //Byte2
-		GL_BYTE,        //Byte3
-		GL_BYTE,        //Byte4
-
-		GL_UNSIGNED_BYTE,    //UByte1
-		GL_UNSIGNED_BYTE,    //UByte2
-		GL_UNSIGNED_BYTE,    //UByte3
-		GL_UNSIGNED_BYTE,    //UByte4
-
-		GL_SHORT,        //Short1
-		GL_SHORT,        //Short2
-		GL_SHORT,        //Short3
-		GL_SHORT,        //Short4
-
-		GL_UNSIGNED_SHORT,    //UShort1
-		GL_UNSIGNED_SHORT,    //UShort2
-		GL_UNSIGNED_SHORT,    //UShort3
-		GL_UNSIGNED_SHORT,    //UShort4
-
-		0,            //IntegerTypeCount
-
-	};
-
-	constexpr const char* GetFrameBufferStatus(GLenum error) {
-		switch (error) {
-			default:
-			case GL_FRAMEBUFFER_UNDEFINED: return "GL_FRAMEBUFFER_UNDEFINED";
-			case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT: return "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT";
-			case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT: return "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT";
-			case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER: return "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER";
-			case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER: return "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER";
-			case GL_FRAMEBUFFER_UNSUPPORTED: return "GL_FRAMEBUFFER_UNSUPPORTED";
-			case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE: return "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE";
-			case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS: return "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS";
-			case GL_FRAMEBUFFER_COMPLETE: return "GL_FRAMEBUFFER_COMPLETE";
-		}
-	}
-
-}
-
 namespace Vortex::Graphics {
-	OpenGL45Backend::OpenGL45Backend(GLADloadproc context_proc)
-		: m_Limits{}, m_ActiveStates{} {
-		if (!gladLoadGLLoader(context_proc)) {
+	OpenGL45Backend::OpenGL45Backend()
+		: m_HardwareLimits{},
+		  m_ActiveStates{} {
+
+		if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
 			VORTEX_LOG_ERROR("[OpenGL] Failed to initialize OpenGL 4.5");
 			return;
 		}
@@ -251,173 +72,235 @@ namespace Vortex::Graphics {
 		VORTEX_LOG_INFO("[OpenGL] API        : %s", glGetString(GL_RENDERER));
 		//VORTEX_LOG_DEBUG("[OpenGL] Extensions : %s", glGetString(GL_EXTENSIONS))
 
-		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_TEXTURE_SIZE, static_cast<GLint*>(&m_Limits[RenderLimits::MaxTextureSize])));
-		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, static_cast<GLint*>(&m_Limits[RenderLimits::MaxTextureLayers])));
-		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, static_cast<GLint*>(&m_Limits[RenderLimits::MaxTextureSamplers])));
+		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_TEXTURE_SIZE, static_cast<GLint*>(&m_HardwareLimits[HardwareLimit::MaxTextureSize])));
+		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, static_cast<GLint*>(&m_HardwareLimits[HardwareLimit::MaxTextureLayers])));
+		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, static_cast<GLint*>(&m_HardwareLimits[HardwareLimit::MaxTextureSamplers])));
 
-		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_FRAMEBUFFER_WIDTH, static_cast<GLint*>(&m_Limits[RenderLimits::MaxFrameBufferWidth])));
-		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_FRAMEBUFFER_HEIGHT, static_cast<GLint*>(&m_Limits[RenderLimits::MaxFrameBufferHeight])));
-		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, static_cast<GLint*>(&m_Limits[RenderLimits::MaxFrameBufferColorAttachments])));
-		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_DRAW_BUFFERS, static_cast<GLint*>(&m_Limits[RenderLimits::MaxDrawBuffers])));
+		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_FRAMEBUFFER_WIDTH, static_cast<GLint*>(&m_HardwareLimits[HardwareLimit::MaxFrameBufferWidth])));
+		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_FRAMEBUFFER_HEIGHT, static_cast<GLint*>(&m_HardwareLimits[HardwareLimit::MaxFrameBufferHeight])));
+		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, static_cast<GLint*>(&m_HardwareLimits[HardwareLimit::MaxFrameBufferColorAttachments])));
+		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_DRAW_BUFFERS, static_cast<GLint*>(&m_HardwareLimits[HardwareLimit::MaxDrawBuffers])));
 
-		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, static_cast<GLint*>(&m_Limits[RenderLimits::MaxVertexAttributes])));
+		VORTEX_GL_CALL(glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, static_cast<GLint*>(&m_HardwareLimits[HardwareLimit::MaxVertexAttributes])));
 
-		for (int type = 0; type < RenderLimits::Count;
+		GLint work_group_x;
+		GLint work_group_y;
+		GLint work_group_z;
+		VORTEX_GL_CALL(glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &work_group_x));
+		VORTEX_GL_CALL(glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &work_group_y));
+		VORTEX_GL_CALL(glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &work_group_z));
+
+		m_HardwareLimits[HardwareLimit::MaxComputeWorkGroupX] = static_cast<int>(work_group_x);
+		m_HardwareLimits[HardwareLimit::MaxComputeWorkGroupY] = static_cast<int>(work_group_y);
+		m_HardwareLimits[HardwareLimit::MaxComputeWorkGroupZ] = static_cast<int>(work_group_z);
+
+		for (int type = 0; type < HardwareLimit::Count;
 			 ++type) {
-			VORTEX_LOG_DEBUG("[OpenGL] %s : %i", RenderLimits::ToString[type], m_Limits[type]);
+			VORTEX_LOG_DEBUG("[OpenGL] %s : %i", HardwareLimit::ToString[type], m_HardwareLimits[type]);
 		}
 
 		VORTEX_LOG_INFO("[OpenGL] Initialized successfully.");
 	}
 
 	OpenGL45Backend::~OpenGL45Backend() {
-		for (const auto& node : m_TextureDatas) {
-			auto id = static_cast<GLuint>(node.first.id);
-			VORTEX_GL_CALL(glDeleteTextures(1, &id));
+		VORTEX_LOG_DEBUG("[RenderBackend] Shutdown begin.")
+
+#ifdef VORTEX_DEBUG
+		if (!m_Datas.d_ActiveIDs.empty()) {
+			VORTEX_LOG_DEBUG("[RenderBackend] following handles was active:")
+			for (auto handle : m_Datas.d_ActiveIDs) {
+				if (m_Datas.Is<Texture>(handle)) {
+					VORTEX_LOG_DEBUG("[RenderBackend] Texture %u", handle)
+				} else if (m_Datas.Is<Buffer>(handle)) {
+					VORTEX_LOG_DEBUG("[RenderBackend] Buffer %u", handle)
+				} else if (m_Datas.Is<VertexArray>(handle)) {
+					VORTEX_LOG_DEBUG("[RenderBackend] VertexArray %u", handle)
+				} else if (m_Datas.Is<Shader>(handle)) {
+					VORTEX_LOG_DEBUG("[RenderBackend] Shader %u", handle)
+				} else if (m_Datas.Is<FrameBuffer>(handle)) {
+					VORTEX_LOG_DEBUG("[RenderBackend] FrameBuffer %u", handle)
+				} else if (m_Datas.Is<TimerQuery>(handle)) {
+					VORTEX_LOG_DEBUG("[RenderBackend] TimerQuery %u", handle)
+				}
+			}
 		}
-		for (const auto& node : m_BufferDatas) {
-			auto id = static_cast<GLuint>(node.first.id);
-			VORTEX_GL_CALL(glDeleteBuffers(1, &id));
-		}
-		for (const auto& node : m_VertexArrayDatas) {
-			auto id = static_cast<GLuint>(node.first.id);
-			VORTEX_GL_CALL(glDeleteVertexArrays(1, &id));
-		}
-		for (const auto& node : m_ShaderDatas) {
-			auto id = static_cast<GLuint>(node.first.id);
-			VORTEX_GL_CALL(glDeleteShader(id));
-		}
-		for (const auto& node : m_ProgramDatas) {
-			auto id = static_cast<GLuint>(node.first.id);
-			VORTEX_GL_CALL(glDeleteProgram(id));
-		}
-		for (const auto& node : m_FrameBufferDatas) {
-			auto id = static_cast<GLuint>(node.first.id);
-			VORTEX_GL_CALL(glDeleteRenderbuffers(1, &id));
-		}
+#endif
+		VORTEX_LOG_DEBUG("[RenderBackend] Shutdown end.")
+
 	}
 
-	BufferHandle OpenGL45Backend::CreateBuffer(BufferUsage::Enum buffer_usage, const BufferLayout& buffer_layout, SizeType count, const void* data) {
+	ElementType::Enum OpenGL45Backend::FindType(GLenum gl_type) {
+		for (int j = 0; j < ElementType::Count; ++j) {
+			auto type = static_cast<ElementType::Enum>(j);
+			if (OpenGL45::UniformElementType[type] == gl_type) {
+				return type;
+			}
+		}
+		return ElementType::Count;
+	}
+
+	Handle OpenGL45Backend::CreateBuffer(BufferUsage::Enum buffer_usage, const BufferLayout& buffer_layout, SizeType count, const void* data) {
 		GLuint id;
 		VORTEX_GL_CALL(glCreateBuffers(1, &id));
 
 		auto gl_size = static_cast<GLsizei>(count * buffer_layout.GetStride());
-		VORTEX_GL_CALL(glNamedBufferData(id, gl_size, data, OpenGL::BufferUsage[buffer_usage]));
+		VORTEX_GL_CALL(glNamedBufferData(id, gl_size, data, OpenGL45::BufferUsage[buffer_usage]));
 
-		BufferHandle handle{static_cast<HandleType>(id)};
-
-		BufferData buffer_data{
+		Buffer buffer{
 			buffer_usage
 			, buffer_layout
 			, true
 			, count * buffer_layout.GetStride()
+			, id
 		};
 
-		m_BufferDatas[handle] = buffer_data;
+		auto handle = m_Datas.Insert(buffer);
+
 		return handle;
 	}
+	void OpenGL45Backend::UpdateBuffer(Handle buffer_handle, SizeType offset, SizeType data_size, const void* data) {
+		VORTEX_ASSERT(d_BufferChecks(buffer_handle))
+		const auto& buffer = m_Datas.Get<Buffer>(buffer_handle);
+		VORTEX_ASSERT(buffer.Mutable)
+		VORTEX_ASSERT(offset + data_size <= buffer.Size)
 
-	void OpenGL45Backend::UpdateBuffer(BufferHandle handle, SizeType offset, SizeType data_size, const void* data) {
-		VORTEX_ASSERT(IsValid(handle))
-		const auto& buffer_data = m_BufferDatas.at(handle);
-		VORTEX_ASSERT(buffer_data.Mutable)
-		VORTEX_ASSERT(buffer_data.Size >= offset + data_size)
-
-		auto id = static_cast<GLuint>(handle.id);
+		auto id = static_cast<GLuint>(buffer.BackendID);
 		auto gl_offs = static_cast<GLsizei>(offset);
 		auto gl_size = static_cast<GLsizei>(data_size);
 		VORTEX_GL_CALL(glNamedBufferSubData(id, gl_offs, gl_size, data));
 	}
+	void OpenGL45Backend::GetBuffer(Handle buffer_handle, SizeType offset, SizeType data_size, void* data) {
+		VORTEX_ASSERT(d_BufferChecks(buffer_handle))
+		const auto& buffer = m_Datas.Get<Buffer>(buffer_handle);
+		VORTEX_ASSERT(buffer.Mutable)
+		VORTEX_ASSERT(offset + data_size <= buffer.Size)
 
-	void OpenGL45Backend::GetBuffer(BufferHandle handle, SizeType offset, SizeType data_size, void* data) {
-		VORTEX_ASSERT(IsValid(handle))
-		const auto& buffer_data = m_BufferDatas.at(handle);
-		VORTEX_ASSERT(buffer_data.Mutable)
-		VORTEX_ASSERT(buffer_data.Size >= offset + data_size)
-
-		auto id = static_cast<GLuint>(handle.id);
+		auto id = static_cast<GLuint>(buffer.BackendID);
 		auto gl_offs = static_cast<GLsizei>(offset);
 		auto gl_size = static_cast<GLsizei>(data_size);
 		VORTEX_GL_CALL(glGetNamedBufferSubData(id, gl_offs, gl_size, data));
 	}
+	void OpenGL45Backend::DestroyBuffer(Handle buffer_handle) {
 
-	void OpenGL45Backend::Destroy(BufferHandle handle) {
-		if (!IsValid(handle)) {
-			VORTEX_LOG_WARNING("[OpenGL] Tried to destroy invalid buffer handle.");
-			return;
-		}
-		auto id = static_cast<GLuint>(handle.id);
+		VORTEX_ASSERT(d_BufferChecks(buffer_handle))
+		const auto& buffer = m_Datas.Get<Buffer>(buffer_handle);
+
+		auto id = static_cast<GLuint>(buffer.BackendID);
 		VORTEX_GL_CALL(glDeleteBuffers(1, &id));
-		m_BufferDatas.erase(handle);
+		m_Datas.Destroy(buffer_handle);
 	}
 
-	VertexArrayHandle OpenGL45Backend::CreateVertexArray(Topology::Enum topology) {
+	Handle OpenGL45Backend::CreateVertexArray(Topology::Enum topology) {
 		GLuint id;
 		VORTEX_GL_CALL(glCreateVertexArrays(1, &id));
 
-		VertexArrayHandle handle{static_cast<HandleType>(id)};
-		VertexArrayData vertex_array_data{
-			InvalidID
-			, Vector<BufferHandle>{}
+		VertexArray vertex_array{
+			RenderBackendMap::NullHandle
+			, std::vector<Handle>{}
 			, false
 			, 0
 			, topology
+			, id
 		};
 
-		m_VertexArrayDatas[handle] = vertex_array_data;
+		auto handle = m_Datas.Insert(vertex_array);
+
 		return handle;
 	}
+	void OpenGL45Backend::SetIndexBuffer(Handle vertex_array_handle, Handle index_buffer_handle) {
+		VORTEX_ASSERT(d_VertexArrayChecks(vertex_array_handle))
+		VORTEX_ASSERT(d_BufferChecks(index_buffer_handle))
 
-	void OpenGL45Backend::SetIndexBuffer(VertexArrayHandle handle, BufferHandle index_buffer_handle) {
-		VORTEX_ASSERT(IsValid(handle))
-		VORTEX_ASSERT(IsValid(index_buffer_handle))
+		auto& vertex_Array = m_Datas.Get<VertexArray>(vertex_array_handle);
+		const auto& buffer = m_Datas.Get<Buffer>(index_buffer_handle);
 
-		auto& vao_data = m_VertexArrayDatas.at(handle);
-		vao_data.Indexed = true;
-		vao_data.IndexBufferHandle = index_buffer_handle;
+		vertex_Array.Indexed = true;
+		vertex_Array.IndexBufferHandle = index_buffer_handle;
 
-		auto vao_id = static_cast<GLuint>(handle.id);
-		auto ibo_id = static_cast<GLuint>(index_buffer_handle.id);
+		auto vao_id = static_cast<GLuint>(vertex_Array.BackendID);
+		auto ibo_id = static_cast<GLuint>(buffer.BackendID);
 
 		VORTEX_GL_CALL(glVertexArrayElementBuffer(vao_id, ibo_id));
 	}
-	void OpenGL45Backend::AddVertexBuffer(VertexArrayHandle handle, BufferHandle vertex_buffer_handle) {
-		VORTEX_ASSERT(IsValid(handle))
-		VORTEX_ASSERT(IsValid(vertex_buffer_handle))
+	void OpenGL45Backend::AddVertexBuffer(Handle vertex_array_handle, Handle vertex_buffer_handle) {
+		VORTEX_ASSERT(d_VertexArrayChecks(vertex_array_handle))
+		VORTEX_ASSERT(d_BufferChecks(vertex_buffer_handle))
 
-		auto& vao_data = m_VertexArrayDatas.at(handle);
-		auto& vbo_data = m_BufferDatas.at(vertex_buffer_handle);
-		const auto& layout = vbo_data.Layout;
+		auto& vertex_Array = m_Datas.Get<VertexArray>(vertex_array_handle);
+		const auto& buffer = m_Datas.Get<Buffer>(vertex_buffer_handle);
 
-		auto vao_id = static_cast<GLuint>(handle.id);
-		auto vbo_id = static_cast<GLuint>(vertex_buffer_handle.id);
+		const auto& layout = buffer.Layout;
 
-		SizeType attribute_index = vao_data.BufferBindIndex;
+		auto vao_id = static_cast<GLuint>(vertex_Array.BackendID);
+		auto vbo_id = static_cast<GLuint>(buffer.BackendID);
+
+		SizeType attribute_index = vertex_Array.BufferBindIndex;
 
 		for (SizeType i = 0; i < layout.Count(); ++i) {
 			auto element_type = layout[i].Type;
 			auto element_offset = layout[i].Offset;
 
 			VORTEX_GL_CALL(glEnableVertexArrayAttrib(vao_id, attribute_index));
-			VORTEX_GL_CALL(glVertexArrayAttribBinding(vao_id, attribute_index, vao_data.BufferBindIndex));
+			VORTEX_GL_CALL(glVertexArrayAttribBinding(vao_id, attribute_index, vertex_Array.BufferBindIndex));
 
-			if (element_type < RenderElementType::FloatingTypeCount) {
-				auto element_norm = layout[i].Normalized;
-				VORTEX_GL_CALL(glVertexArrayAttribFormat(
-					vao_id,
-					attribute_index,
-					RenderElementType::ComponentCount[element_type],
-					OpenGL::RenderElementType[element_type],
-					element_norm,
-					element_offset
-				));
-				++attribute_index;
+			if (element_type < ElementType::FloatingTypeCount) {
+				if (element_type == ElementType::Matrix2) {// matrix2 is equals 2 float2s
+					for (int j = 0; j < 2; ++j) {
+						auto element_norm = layout[i].Normalized;
+						VORTEX_GL_CALL(glVertexArrayAttribFormat(
+							vao_id,
+							attribute_index,
+							ElementType::ComponentCount[ElementType::Float2],
+							OpenGL45::BufferElementType[ElementType::Float2],
+							element_norm,
+							element_offset
+						));
+						++attribute_index;
+					}
+				} else if (element_type == ElementType::Matrix3) {// matrix3 is equals 3 float3s
+					for (int j = 0; j < 3; ++j) {
+						auto element_norm = layout[i].Normalized;
+						VORTEX_GL_CALL(glVertexArrayAttribFormat(
+							vao_id,
+							attribute_index,
+							ElementType::ComponentCount[ElementType::Float3],
+							OpenGL45::BufferElementType[ElementType::Float3],
+							element_norm,
+							element_offset
+						));
+						++attribute_index;
+					}
+				} else if (element_type == ElementType::Matrix4) {// matrix4 is equals 4 float4s
+					for (int j = 0; j < 4; ++j) {
+						auto element_norm = layout[i].Normalized;
+						VORTEX_GL_CALL(glVertexArrayAttribFormat(
+							vao_id,
+							attribute_index,
+							ElementType::ComponentCount[ElementType::Float4],
+							OpenGL45::BufferElementType[ElementType::Float4],
+							element_norm,
+							element_offset
+						));
+						++attribute_index;
+					}
+				} else {
+					auto element_norm = layout[i].Normalized;
+					VORTEX_GL_CALL(glVertexArrayAttribFormat(
+						vao_id,
+						attribute_index,
+						ElementType::ComponentCount[element_type],
+						OpenGL45::BufferElementType[element_type],
+						element_norm,
+						element_offset
+					));
+					++attribute_index;
+				}
 			} else {
 				VORTEX_GL_CALL(glVertexArrayAttribIFormat(
 					vao_id,
 					attribute_index,
-					RenderElementType::ComponentCount[element_type],
-					OpenGL::RenderElementType[element_type],
+					ElementType::ComponentCount[element_type],
+					OpenGL45::BufferElementType[element_type],
 					element_offset
 				));
 				++attribute_index;
@@ -425,50 +308,109 @@ namespace Vortex::Graphics {
 		}
 
 		auto gl_stride = static_cast<GLsizei>(layout.GetStride());
-		VORTEX_GL_CALL(glVertexArrayVertexBuffer(vao_id, vao_data.BufferBindIndex, vbo_id, 0, gl_stride));
-		VORTEX_GL_CALL(glVertexArrayBindingDivisor(vao_id, vao_data.BufferBindIndex, layout.ElementPerInstance));
-		vao_data.VertexBufferHandles.EmplaceBack(vertex_buffer_handle);
-		vao_data.BufferBindIndex = attribute_index;
+		VORTEX_GL_CALL(glVertexArrayVertexBuffer(vao_id, vertex_Array.BufferBindIndex, vbo_id, 0, gl_stride));
+		VORTEX_GL_CALL(glVertexArrayBindingDivisor(vao_id, vertex_Array.BufferBindIndex, layout.ElementPerInstance));
+		vertex_Array.VertexBufferHandles.emplace_back(vertex_buffer_handle);
+		vertex_Array.BufferBindIndex = attribute_index;
 	}
+	void OpenGL45Backend::Draw(Handle vertex_array_handle, SizeType count) const {
+		VORTEX_ASSERT(d_VertexArrayChecks(vertex_array_handle))
+		const auto& vertex_array = m_Datas.Get<VertexArray>(vertex_array_handle);
+		auto gl_id = static_cast<GLuint>(vertex_array.BackendID);
 
-	void OpenGL45Backend::Destroy(VertexArrayHandle handle) {
-		if (!IsValid(handle)) {
-			VORTEX_LOG_WARNING("[OpenGL] Tried to destroy invalid vertex array handle.");
-			return;
+		VORTEX_GL_CALL(glBindVertexArray(gl_id));
+		if (vertex_array.Indexed) {
+			auto index_buffer_handle = vertex_array.IndexBufferHandle;
+			VORTEX_ASSERT(Contains(index_buffer_handle))
+
+			const auto& index_buffer = m_Datas.Get<Buffer>(index_buffer_handle);
+			auto type = index_buffer.Layout[0].Type;
+
+			VORTEX_ASSERT(type == ElementType::UInt1 || type == ElementType::UShort1 || type == ElementType::UByte1)
+
+			VORTEX_GL_CALL(glDrawElements(
+				OpenGL45::Topology[vertex_array.Topology],
+				count,
+				OpenGL45::BufferElementType[type],
+				nullptr
+			));
+		} else {
+			VORTEX_GL_CALL(glDrawArrays(
+				OpenGL45::Topology[vertex_array.Topology],
+				0,
+				count
+			));
 		}
-		auto id = static_cast<GLuint>(handle.id);
+	}
+	void OpenGL45Backend::DrawInstanced(Handle vertex_array_handle, SizeType count, SizeType instance_count) const {
+		VORTEX_ASSERT(d_VertexArrayChecks(vertex_array_handle))
+		const auto& vertex_array = m_Datas.Get<VertexArray>(vertex_array_handle);
+		auto gl_id = static_cast<GLuint>(vertex_array.BackendID);
+
+		VORTEX_GL_CALL(glBindVertexArray(gl_id));
+		if (vertex_array.Indexed) {
+			auto index_buffer_handle = vertex_array.IndexBufferHandle;
+			VORTEX_ASSERT(Contains(index_buffer_handle))
+
+			const auto& index_buffer = m_Datas.Get<Buffer>(index_buffer_handle);
+			auto type = index_buffer.Layout[0].Type;
+
+			VORTEX_ASSERT(type == ElementType::UInt1 || type == ElementType::UShort1 || type == ElementType::UByte1)
+
+			VORTEX_GL_CALL(glDrawElementsInstanced(
+				OpenGL45::Topology[vertex_array.Topology],
+				count,
+				OpenGL45::BufferElementType[type],
+				nullptr,
+				instance_count
+			));
+		} else {
+			VORTEX_GL_CALL(glDrawArraysInstanced(
+				OpenGL45::Topology[vertex_array.Topology],
+				0,
+				count,
+				instance_count
+			));
+		}
+	}
+	void OpenGL45Backend::DestroyVertexArray(Handle vertex_array_handle) {
+		VORTEX_ASSERT(d_VertexArrayChecks(vertex_array_handle))
+		const auto& vertex_array = m_Datas.Get<VertexArray>(vertex_array_handle);
+
+		auto id = static_cast<GLuint>(vertex_array.BackendID);
 		VORTEX_GL_CALL(glDeleteVertexArrays(1, &id));
-		m_VertexArrayDatas.erase(handle);
+		m_Datas.Destroy(vertex_array_handle);
 	}
 
-	TextureHandle OpenGL45Backend::CreateTexture2D(
-		UInt16 width,
-		UInt16 height,
+	Handle OpenGL45Backend::CreateTexture2D(
+		const UInt16* size,
 		PixelFormat::Enum format,
-		const void* data,
+		const void* pixels,
 		TextureLODFilter::Enum min_filter,
 		TextureLODFilter::Enum mag_filter,
 		TextureWrap::Enum wrap_s,
 		TextureWrap::Enum wrap_t,
-		bool create_mipmap) {
-		VORTEX_ASSERT(width <= m_Limits[RenderLimits::MaxTextureSize])
-		VORTEX_ASSERT(height <= m_Limits[RenderLimits::MaxTextureSize])
+		bool create_mipmap
+	) {
+
+		VORTEX_ASSERT(size[0] <= m_HardwareLimits[HardwareLimit::MaxTextureSize])
+		VORTEX_ASSERT(size[1] <= m_HardwareLimits[HardwareLimit::MaxTextureSize])
 
 		GLuint id;
 		VORTEX_GL_CALL(glCreateTextures(GL_TEXTURE_2D, 1, &id));
-		VORTEX_GL_CALL(glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, OpenGL::TextureLODFilter[min_filter]));
-		VORTEX_GL_CALL(glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, OpenGL::TextureLODFilter[mag_filter]));
-		VORTEX_GL_CALL(glTextureParameteri(id, GL_TEXTURE_WRAP_S, OpenGL::TextureWrapType[wrap_s]));
-		VORTEX_GL_CALL(glTextureParameteri(id, GL_TEXTURE_WRAP_T, OpenGL::TextureWrapType[wrap_t]));
+		VORTEX_GL_CALL(glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, OpenGL45::TextureLODFilter[min_filter]));
+		VORTEX_GL_CALL(glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, OpenGL45::TextureLODFilter[mag_filter]));
+		VORTEX_GL_CALL(glTextureParameteri(id, GL_TEXTURE_WRAP_S, OpenGL45::TextureWrapType[wrap_s]));
+		VORTEX_GL_CALL(glTextureParameteri(id, GL_TEXTURE_WRAP_T, OpenGL45::TextureWrapType[wrap_t]));
 
 		VORTEX_GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 		VORTEX_GL_CALL(glPixelStorei(GL_PACK_ALIGNMENT, 1));
 
 		VORTEX_GL_CALL(glTextureStorage2D(id,
 										  1, //num levels
-										  OpenGL::PixelFormatInternal[format],
-										  width,
-										  height
+										  OpenGL45::PixelFormat::Internal[format],
+										  size[0],
+										  size[1]
 		));
 
 		//swizzle data if it is alpha texture
@@ -479,50 +421,51 @@ namespace Vortex::Graphics {
 			VORTEX_GL_CALL(glTextureParameteriv(id, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask));
 		}
 
-		if (data != nullptr) {
+		if (pixels != nullptr) {
 			VORTEX_GL_CALL(glTextureSubImage2D(id,
 											   0,            //level
 											   0,            //x_off
 											   0,            //y_off
-											   width,        //width
-											   height,       //height
-											   OpenGL::PixelFormat[format],
-											   OpenGL::PixelFormatType[format],
-											   data
+											   size[0],       //width
+											   size[1],       //height
+											   OpenGL45::PixelFormat::Format[format],
+											   OpenGL45::PixelFormat::Type[format],
+											   pixels
 			));
 			if (create_mipmap) {
 				VORTEX_GL_CALL(glGenerateTextureMipmap(id));
 			}
 		}
 
-		TextureHandle handle{static_cast<HandleType>(id)};
-		TextureData texture_data{
+		Texture texture{
 			format
-			, width
-			, height
-			, 0
+			, size[0]
+			, size[1]
+			, 1
 			, 1
 			, PixelFormat::BitsPerPixel[format]
 			, false
+			, id
 		};
-		m_TextureDatas[handle] = texture_data;
+
+		auto handle = m_Datas.Insert<Texture>(texture);
 		return handle;
 	}
-	void OpenGL45Backend::UpdateTexture2D(TextureHandle handle, const void* pixels, bool create_mipmap) {
-		VORTEX_ASSERT(IsValid(handle))
+	void OpenGL45Backend::UpdateTexture2D(Handle texture_handle, const void* pixels, bool create_mipmap) {
+		VORTEX_ASSERT(d_TextureChecks(texture_handle))
 		VORTEX_ASSERT(pixels != nullptr)
 
-		const auto& texture_data = m_TextureDatas.at(handle);
-		auto id = static_cast<GLuint>(handle.id);
+		const auto& texture = m_Datas.Get<Texture>(texture_handle);
+		auto id = static_cast<GLuint>(texture.BackendID);
 
 		VORTEX_GL_CALL(glTextureSubImage2D(id,
 										   0,            //level
 										   0,            //x_off
 										   0,            //y_off
-										   texture_data.Width,        //width
-										   texture_data.Height,       //height
-										   OpenGL::PixelFormat[texture_data.Format],
-										   OpenGL::PixelFormatType[texture_data.Format],
+										   texture.Size[0],        //width
+										   texture.Size[1],       //height
+										   OpenGL45::PixelFormat::Format[texture.Format],
+										   OpenGL45::PixelFormat::Type[texture.Format],
 										   pixels
 		));
 
@@ -531,598 +474,592 @@ namespace Vortex::Graphics {
 		}
 	}
 
-	void OpenGL45Backend::GetTexture(TextureHandle handle, UInt16 buffer_size, void* data) {
-		VORTEX_ASSERT(IsValid(handle))
-		VORTEX_ASSERT(data != nullptr)
+	void OpenGL45Backend::GetTexture(Handle texture_handle, UInt16 buffer_size, void* pixels) {
+		VORTEX_ASSERT(d_TextureChecks(texture_handle))
+		VORTEX_ASSERT(pixels != nullptr)
 
-		const auto& texture_data = m_TextureDatas.at(handle);
-		auto id = static_cast<GLuint>(handle.id);
+		const auto& texture = m_Datas.Get<Texture>(texture_handle);
+		auto id = static_cast<GLuint>(texture.BackendID);
 
-		VORTEX_GL_CALL(glGetTextureImage(id,
-										 0,
-										 OpenGL::PixelFormatInternal[texture_data.Format],
-										 OpenGL::PixelFormatType[texture_data.Format],
-										 buffer_size,
-										 data)
+		VORTEX_GL_CALL(
+			glGetTextureImage(
+				id,
+				0,
+				OpenGL45::PixelFormat::Internal[texture.Format],
+				OpenGL45::PixelFormat::Type[texture.Format],
+				buffer_size,
+				pixels
+			)
 		);
 	}
-	void OpenGL45Backend::Bind(TextureHandle handle, UInt16 sampler) {
-		VORTEX_ASSERT(IsValid(handle))
-		VORTEX_ASSERT(sampler < m_Limits[RenderLimits::MaxTextureSamplers])
-		auto id = static_cast<GLuint>(handle.id);
-		VORTEX_GL_CALL(glBindTextureUnit(sampler, id));
-	}
+	void OpenGL45Backend::DestroyTexture(Handle texture_handle) {
+		VORTEX_ASSERT(d_TextureChecks(texture_handle))
+		const auto& texture = m_Datas.Get<Texture>(texture_handle);
 
-	void OpenGL45Backend::Destroy(TextureHandle handle) {
-		if (!IsValid(handle)) {
-			VORTEX_LOG_WARNING("[OpenGL] Tried to destroy invalid texture handle.");
-			return;
-		}
-		auto id = static_cast<GLuint>(handle.id);
+		auto id = static_cast<GLuint>(texture.BackendID);
 		VORTEX_GL_CALL(glDeleteTextures(1, &id));
-		m_TextureDatas.erase(handle);
+		m_Datas.Destroy(texture_handle);
 	}
 
-	ShaderHandle OpenGL45Backend::CreateShader(ShaderType::Enum shader_type, const char* source) {
-		GLuint id;
-		VORTEX_GL_CALL(id = glCreateShader(OpenGL::ShaderType[shader_type]));
-		VORTEX_GL_CALL(glShaderSource(id, 1, &source, 0));
-		VORTEX_GL_CALL(glCompileShader(id));
-
-		GLint status = 0;
-		VORTEX_GL_CALL(glGetShaderiv(id, GL_COMPILE_STATUS, &status));
-
-		if (status == GL_FALSE) {
-			GLint max_length = 0;
-			VORTEX_GL_CALL(glGetShaderiv(id, GL_INFO_LOG_LENGTH, &max_length));
-			String err_log;
-			err_log.resize(max_length);
-			VORTEX_GL_CALL(glGetShaderInfoLog(id, max_length, &max_length, &err_log[0]));
-
-			VORTEX_LOG_ERROR("[OpenGL] Failed to compile %s shader:\n%s", ShaderType::ToString[shader_type], err_log.data());
-
-			VORTEX_GL_CALL(glDeleteShader(id));
-
-			return {InvalidID};
-		} else {
-			ShaderData shader_data{
-				shader_type
-			};
-
-			ShaderHandle handle{static_cast<HandleType>(id)};
-			m_ShaderDatas[handle] = shader_data;
-
-			VORTEX_LOG_INFO("[OpenGL] %s Shader compiled successfully.", ShaderType::ToString[shader_type]);
-			return handle;
-		}
-	}
-
-	void OpenGL45Backend::Destroy(ShaderHandle handle) {
-		if (!IsValid(handle)) {
-			VORTEX_LOG_WARNING("[OpenGL] Tried to destroy invalid shader handle.");
-			return;
-		}
-		auto id = static_cast<GLuint>(handle.id);
-		VORTEX_GL_CALL(glDeleteShader(id));
-		m_ShaderDatas.erase(handle);
-	}
-
-	ProgramHandle OpenGL45Backend::CreateProgram(ShaderHandle* shader_handles, SizeType count, bool consume) {
-		GLuint id;
-		VORTEX_GL_CALL(id = glCreateProgram());
+	Handle OpenGL45Backend::CreateShader(const char** sources, ShaderType::Enum* types, SizeType count) {
+		std::vector<GLuint> shader_ids;
+		shader_ids.reserve(count);
+		shader_ids.resize(count);
 
 		for (SizeType i = 0; i < count; ++i) {
-			VORTEX_ASSERT(IsValid(shader_handles[i]))
-			auto shader_id = static_cast<GLuint>(shader_handles[i].id);
-			VORTEX_GL_CALL(glAttachShader(id, shader_id));
-		}
-		VORTEX_GL_CALL(glLinkProgram(id));
-		VORTEX_GL_CALL(glValidateProgram(id));
+			GLuint id;
+			auto type = types[i];
+			const char* source = sources[i];
+			VORTEX_GL_CALL(id = glCreateShader(OpenGL45::ShaderType[type]));
+			VORTEX_GL_CALL(glShaderSource(id, 1, &source, 0));
+			VORTEX_GL_CALL(glCompileShader(id));
 
-		GLint status = 0;
-		VORTEX_GL_CALL(glGetProgramiv(id, GL_LINK_STATUS, &status));
+			GLint status = 0;
+			VORTEX_GL_CALL(glGetShaderiv(id, GL_COMPILE_STATUS, &status));
+			if (status == GL_FALSE) {
+				GLint max_length = 0;
+				VORTEX_GL_CALL(glGetShaderiv(id, GL_INFO_LOG_LENGTH, &max_length));
+				String err_log;
+				err_log.resize(max_length);
+				VORTEX_GL_CALL(glGetShaderInfoLog(id, max_length, &max_length, &err_log[0]));
 
-		if (consume) {
-			for (SizeType i = 0; i < count; ++i) {
-				Destroy(shader_handles[i]);
+				VORTEX_LOG_ERROR("[OpenGL] Failed to compile %s shader:\n%s", ShaderType::ToString[type], err_log.data());
+
+				VORTEX_GL_CALL(glDeleteShader(id));
+				return RenderBackendMap::NullHandle;
+			} else {
+				shader_ids[i] = id;
+				VORTEX_LOG_INFO("[OpenGL] %s Shader compiled successfully.", ShaderType::ToString[type]);
 			}
 		}
 
-		if (status == GL_FALSE) {
+		GLuint program_id;
+		VORTEX_GL_CALL(program_id = glCreateProgram());
+
+		for (SizeType i = 0; i < count; ++i) {
+			VORTEX_GL_CALL(glAttachShader(program_id, shader_ids[i]));
+		}
+
+		VORTEX_GL_CALL(glLinkProgram(program_id));
+		VORTEX_GL_CALL(glValidateProgram(program_id));
+
+		GLint program_status = 0;
+		VORTEX_GL_CALL(glGetProgramiv(program_id, GL_LINK_STATUS, &program_status));
+
+		if (program_status == GL_FALSE) {
 			GLint max_length = 0;
-			VORTEX_GL_CALL(glGetProgramiv(id, GL_INFO_LOG_LENGTH, &max_length));
+			VORTEX_GL_CALL(glGetProgramiv(program_id, GL_INFO_LOG_LENGTH, &max_length));
 
 			String err_log;
 			err_log.resize(max_length);
-			VORTEX_GL_CALL(glGetProgramInfoLog(id, max_length, &max_length, &err_log[0]));
+			VORTEX_GL_CALL(glGetProgramInfoLog(program_id, max_length, &max_length, &err_log[0]));
 			VORTEX_LOG_ERROR("[OpenGL] Program linking failed.\n%s", err_log.data());
 
-			VORTEX_GL_CALL(glDeleteProgram(id));
-			return {InvalidID};
+			for (auto shader_id : shader_ids) {
+				VORTEX_GL_CALL(glDeleteShader(shader_id));
+			}
+			VORTEX_GL_CALL(glDeleteProgram(program_id));
+			return RenderBackendMap::NullHandle;
 		} else {
+			Shader data{};
+			data.BackendID = program_id;
+			CreateShaderData(data);
 
-			ProgramHandle handle{static_cast<HandleType>(id)};
-			ProgramData data{};
-			CreateProgramData(data, id);
-			m_ProgramDatas[handle] = data;
-			VORTEX_LOG_DEBUG("[OpenGL] Shader Program linking successful.");
+			auto handle = m_Datas.Insert<Shader>(data);
+			VORTEX_LOG_DEBUG("[OpenGL] Shader Program linking successful.")
 			return handle;
 		}
 	}
-
-	void OpenGL45Backend::CreateProgramData(ProgramData& data, GLuint id) {
-		//retrieve shader uniform count
-		GLsizei uniform_count;
-		VORTEX_GL_CALL(glGetProgramiv(id, GL_ACTIVE_UNIFORMS, &uniform_count));
-
-		//Create cache for names and locations of every uniform and attribute in shader.
-		for (GLsizei i = 0; i < uniform_count; i++) {
-			GLsizei length;
-			GLint size;
-			GLenum type;
-			char name[128];
-			VORTEX_GL_CALL(glGetActiveUniform(id, i, 128, &length, &size, &type, name));
-			VORTEX_GL_CALL(GLint location = glGetUniformLocation(id, name));
-
-			HashedString hashed_str{name, static_cast<SizeType>(length) + 1};
-
-			//data.ShaderLocations.Emplace(hashed_str, location);
-			data.ShaderLocations[hashed_str] = location;
-			VORTEX_LOG_DEBUG("[OpenGL] Cached shader uniform: %i - %s", location, name)
-		}
-
-		GLsizei attribute_count;
-		VORTEX_GL_CALL(glGetProgramiv(id, GL_ACTIVE_ATTRIBUTES, &attribute_count));
-
-		for (GLsizei i = 0; i < attribute_count; i++) {
-			GLsizei length;
-			GLint size;
-			GLenum type;
-			char name[128];
-			VORTEX_GL_CALL(glGetActiveAttrib(id, i, 128, &length, &size, &type, name));
-			VORTEX_GL_CALL(GLint location = glGetAttribLocation(id, name));
-
-			HashedString hashed_str{name, static_cast<SizeType>(length) + 1};
-
-			//data.ShaderLocations.Emplace(hashed_str, location);
-			data.ShaderLocations[hashed_str] = location;
-			VORTEX_LOG_DEBUG("[OpenGL] Cached shader attribute: %i - %s", location, name)
-		}
-	}
-
-	void OpenGL45Backend::Destroy(ProgramHandle handle) {
-		if (!IsValid(handle)) {
-			VORTEX_LOG_WARNING("[OpenGL] Tried to destroy invalid shader program handle.");
-			return;
-		}
-		auto id = static_cast<GLuint>(handle.id);
-		VORTEX_GL_CALL(glDeleteProgram(id));
-		m_ProgramDatas.erase(handle);
-	}
-
-	void OpenGL45Backend::SetShaderFloat1(ProgramHandle handle, HashedString name, float x) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform1f(program_id, location, x));
-		}
-	}
-	void OpenGL45Backend::SetShaderFloat2(ProgramHandle handle, HashedString name, float x, float y) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform2f(program_id, location, x, y));
-		}
-	}
-	void OpenGL45Backend::SetShaderFloat3(ProgramHandle handle, HashedString name, float x, float y, float z) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform3f(program_id, location, x, y, z));
-		}
-	}
-	void OpenGL45Backend::SetShaderFloat4(ProgramHandle handle, HashedString name, float x, float y, float z, float w) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform4f(program_id, location, x, y, z, w));
-		}
-	}
-
-	void OpenGL45Backend::SetShaderInt1(ProgramHandle handle, HashedString name, Int32 x) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform1i(program_id, location, x));
-		}
-	}
-	void OpenGL45Backend::SetShaderInt2(ProgramHandle handle, HashedString name, Int32 x, Int32 y) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform2i(program_id, location, x, y));
-		}
-	}
-	void OpenGL45Backend::SetShaderInt3(ProgramHandle handle, HashedString name, Int32 x, Int32 y, Int32 z) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform3i(program_id, location, x, y, z));
-		}
-	}
-	void OpenGL45Backend::SetShaderInt4(ProgramHandle handle, HashedString name, Int32 x, Int32 y, Int32 z, Int32 w) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform4i(program_id, location, x, y, z, w));
-		}
-	}
-
-	void OpenGL45Backend::SetShaderUInt1(ProgramHandle handle, HashedString name, UInt32 x) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform1ui(program_id, location, x));
-		}
-	}
-	void OpenGL45Backend::SetShaderUInt2(ProgramHandle handle, HashedString name, UInt32 x, UInt32 y) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform2ui(program_id, location, x, y));
-		}
-	}
-	void OpenGL45Backend::SetShaderUInt3(ProgramHandle handle, HashedString name, UInt32 x, UInt32 y, UInt32 z) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform3ui(program_id, location, x, y, z));
-		}
-	}
-	void OpenGL45Backend::SetShaderUInt4(ProgramHandle handle, HashedString name, UInt32 x, UInt32 y, UInt32 z, UInt32 w) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform4ui(program_id, location, x, y, z, w));
-		}
-	}
-
-	void OpenGL45Backend::SetShaderFloat1Array(ProgramHandle handle, HashedString name, const float* array, SizeType count) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform1fv(program_id, location, count, array));
-		}
-	}
-	void OpenGL45Backend::SetShaderFloat2Array(ProgramHandle handle, HashedString name, const float* array, SizeType count) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform2fv(program_id, location, count, array));
-		}
-	}
-	void OpenGL45Backend::SetShaderFloat3Array(ProgramHandle handle, HashedString name, const float* array, SizeType count) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform3fv(program_id, location, count, array));
-		}
-	}
-	void OpenGL45Backend::SetShaderFloat4Array(ProgramHandle handle, HashedString name, const float* array, SizeType count) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform4fv(program_id, location, count, array));
-		}
-	}
-
-	void OpenGL45Backend::SetShaderInt1Array(ProgramHandle handle, HashedString name, const Int32* array, SizeType count) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform1iv(program_id, location, count, array));
-		}
-	}
-	void OpenGL45Backend::SetShaderInt2Array(ProgramHandle handle, HashedString name, const Int32* array, SizeType count) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform2iv(program_id, location, count, array));
-		}
-	}
-	void OpenGL45Backend::SetShaderInt3Array(ProgramHandle handle, HashedString name, const Int32* array, SizeType count) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform3iv(program_id, location, count, array));
-		}
-	}
-	void OpenGL45Backend::SetShaderInt4Array(ProgramHandle handle, HashedString name, const Int32* array, SizeType count) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform4iv(program_id, location, count, array));
-		}
-	}
-
-	void OpenGL45Backend::SetShaderUInt1Array(ProgramHandle handle, HashedString name, const UInt32* array, SizeType count) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform1uiv(program_id, location, count, array));
-		}
-	}
-	void OpenGL45Backend::SetShaderUInt2Array(ProgramHandle handle, HashedString name, const UInt32* array, SizeType count) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform2uiv(program_id, location, count, array));
-		}
-	}
-	void OpenGL45Backend::SetShaderUInt3Array(ProgramHandle handle, HashedString name, const UInt32* array, SizeType count) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform3uiv(program_id, location, count, array));
-		}
-	}
-	void OpenGL45Backend::SetShaderUInt4Array(ProgramHandle handle, HashedString name, const UInt32* array, SizeType count) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniform4uiv(program_id, location, count, array));
-		}
-	}
-
-	void OpenGL45Backend::SetShaderMatrix2(ProgramHandle handle, HashedString name, bool transposed, const float* value) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniformMatrix2fv(program_id, location, 1, transposed, value));
-		}
-	}
-	void OpenGL45Backend::SetShaderMatrix3(ProgramHandle handle, HashedString name, bool transposed, const float* value) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniformMatrix3fv(program_id, location, 1, transposed, value));
-		}
-	}
-	void OpenGL45Backend::SetShaderMatrix4(ProgramHandle handle, HashedString name, bool transposed, const float* value) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto program_id = static_cast<GLuint>(handle.id);
-		GLint location;
-		if (GetShaderUniformLocation(m_ProgramDatas[handle], name, location)) {
-			VORTEX_GL_CALL(glProgramUniformMatrix4fv(program_id, location, 1, transposed, value));
-		}
-	}
-
-	void OpenGL45Backend::Bind(ProgramHandle handle) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto id = static_cast<GLuint>(handle.id);
+	void OpenGL45Backend::BindShader(Handle shader_handle) {
+		VORTEX_ASSERT(d_ShaderChecks(shader_handle))
+		const auto& shader = m_Datas.Get<Shader>(shader_handle);
+		auto id = static_cast<GLuint>(shader.BackendID);
 		VORTEX_GL_CALL(glUseProgram(id));
 	}
+	void OpenGL45Backend::SetUniform(Handle shader_handle, HashedString name, const void* data, SizeType count) {
+		VORTEX_ASSERT(d_ShaderChecks(shader_handle))
+		const auto& shader = m_Datas.Get<Shader>(shader_handle);
 
-	FrameBufferHandle OpenGL45Backend::CreateFrameBuffer(
-		TextureHandle* textures,
-		FrameBufferAttachment::Enum* attachments,
-		SizeType count,
-		bool destroy_textures
-	) {
-		VORTEX_ASSERT(textures != nullptr)
+		auto gl_program_id = static_cast<GLuint>(shader.BackendID);
+
+		GLint gl_location;
+		auto it = shader.Locations.find(name);
+
+		if (it != shader.Locations.end()) {
+			gl_location = it->second;
+			ElementType::Enum type = shader.Types.at(name);
+
+			if (type == ElementType::Sampler1D ||
+				type == ElementType::Sampler2D ||
+				type == ElementType::Sampler3D) {
+				auto binding = shader.BindingPositions.at(name);
+				auto texture_handle = *static_cast<const Handle*>(data);
+				VORTEX_ASSERT(d_TextureChecks(texture_handle))
+
+				const auto& texture = m_Datas.Get<Texture>(texture_handle);
+
+				auto gl_texture_id = static_cast<GLuint>(texture.BackendID);
+				VORTEX_GL_CALL(glBindTextureUnit(binding, gl_texture_id));
+
+			} else if (type == ElementType::Image1D ||
+				type == ElementType::Image2D ||
+				type == ElementType::Image3D) {
+				auto binding = shader.BindingPositions.at(name);
+				auto texture_handle = *static_cast<const Handle*>(data);
+				VORTEX_ASSERT(d_TextureChecks(texture_handle))
+
+				const auto& texture = m_Datas.Get<Texture>(texture_handle);
+
+				auto gl_texture_id = static_cast<GLuint>(texture.BackendID);
+				VORTEX_GL_CALL(glBindImageTexture(
+					binding,
+					gl_texture_id,
+					0,
+					GL_FALSE,
+					0,
+					GL_READ_WRITE,
+					OpenGL45::PixelFormat::ImageTexture[texture.Format])
+				);
+			} else if (type == ElementType::UniformBlock) {
+				auto binding = shader.BindingPositions.at(name);
+				auto buffer_handle = *static_cast<const Handle*>(data);
+				VORTEX_ASSERT(d_BufferChecks(buffer_handle))
+
+				const auto& buffer = m_Datas.Get<Buffer>(buffer_handle);
+
+				auto gl_buffer_id = static_cast<GLuint>(buffer.BackendID);
+
+				VORTEX_GL_CALL(glUniformBlockBinding(gl_program_id, gl_location, binding));
+				VORTEX_GL_CALL(glBindBufferBase(GL_UNIFORM_BUFFER, binding, gl_buffer_id));
+			} else {
+				switch (type) {
+					case ElementType::Float1: {
+						const auto* float_ptr = static_cast<const float*>(data);
+						VORTEX_GL_CALL(glProgramUniform1fv(gl_program_id, gl_location, count, float_ptr));
+						break;
+					}
+					case ElementType::Float2: {
+						const auto* float_ptr = static_cast<const float*>(data);
+						VORTEX_GL_CALL(glProgramUniform2fv(gl_program_id, gl_location, count, float_ptr));
+						break;
+					}
+					case ElementType::Float3: {
+						const auto* float_ptr = static_cast<const float*>(data);
+						VORTEX_GL_CALL(glProgramUniform3fv(gl_program_id, gl_location, count, float_ptr));
+						break;
+					}
+					case ElementType::Float4: {
+						const auto* float_ptr = static_cast<const float*>(data);
+						VORTEX_GL_CALL(glProgramUniform4fv(gl_program_id, gl_location, count, float_ptr));
+						break;
+					}
+
+					case ElementType::Matrix2: {
+						const auto* float_ptr = static_cast<const float*>(data);
+						VORTEX_GL_CALL(glProgramUniformMatrix2fv(gl_program_id, gl_location, count, false, float_ptr));
+						break;
+					}
+					case ElementType::Matrix3: {
+						const auto* float_ptr = static_cast<const float*>(data);
+						VORTEX_GL_CALL(glProgramUniformMatrix3fv(gl_program_id, gl_location, count, false, float_ptr));
+						break;
+					}
+					case ElementType::Matrix4: {
+						const auto* float_ptr = static_cast<const float*>(data);
+						VORTEX_GL_CALL(glProgramUniformMatrix4fv(gl_program_id, gl_location, count, false, float_ptr));
+						break;
+					}
+
+					case ElementType::Int1: {
+						const auto* int_ptr = static_cast<const Int32*>(data);
+						VORTEX_GL_CALL(glProgramUniform1iv(gl_program_id, gl_location, count, int_ptr));
+						break;
+					}
+					case ElementType::Int2: {
+						const auto* int_ptr = static_cast<const Int32*>(data);
+						VORTEX_GL_CALL(glProgramUniform2iv(gl_program_id, gl_location, count, int_ptr));
+						break;
+					}
+					case ElementType::Int3: {
+						const auto* int_ptr = static_cast<const Int32*>(data);
+						VORTEX_GL_CALL(glProgramUniform3iv(gl_program_id, gl_location, count, int_ptr));
+						break;
+					}
+					case ElementType::Int4: {
+						const auto* int_ptr = static_cast<const Int32*>(data);
+						VORTEX_GL_CALL(glProgramUniform4iv(gl_program_id, gl_location, count, int_ptr));
+						break;
+					}
+
+					case ElementType::UInt1: {
+						const auto* uint_ptr = static_cast<const UInt32*>(data);
+						VORTEX_GL_CALL(glProgramUniform1uiv(gl_program_id, gl_location, count, uint_ptr));
+						break;
+					}
+					case ElementType::UInt2: {
+						const auto* uint_ptr = static_cast<const UInt32*>(data);
+						VORTEX_GL_CALL(glProgramUniform2uiv(gl_program_id, gl_location, count, uint_ptr));
+						break;
+					}
+					case ElementType::UInt3: {
+						const auto* uint_ptr = static_cast<const UInt32*>(data);
+						VORTEX_GL_CALL(glProgramUniform3uiv(gl_program_id, gl_location, count, uint_ptr));
+						break;
+					}
+					case ElementType::UInt4: {
+						const auto* uint_ptr = static_cast<const UInt32*>(data);
+						VORTEX_GL_CALL(glProgramUniform4uiv(gl_program_id, gl_location, count, uint_ptr));
+						break;
+					}
+
+					case ElementType::Sampler1D:
+					case ElementType::Sampler2D:
+					case ElementType::Sampler3D:
+
+					case ElementType::Image1D:
+					case ElementType::Image2D:
+					case ElementType::Image3D:
+
+					case ElementType::SamplerTypeCount:
+					case ElementType::FloatingTypeCount:
+					case ElementType::IntegerTypeCount:
+
+					case ElementType::Byte1:
+					case ElementType::Byte2:
+					case ElementType::Byte3:
+					case ElementType::Byte4:
+					case ElementType::UByte1:
+					case ElementType::UByte2:
+					case ElementType::UByte3:
+					case ElementType::UByte4:
+					case ElementType::Short1:
+					case ElementType::Short2:
+					case ElementType::Short3:
+					case ElementType::Short4:
+					case ElementType::UShort1:
+					case ElementType::UShort2:
+					case ElementType::UShort3:
+					case ElementType::UShort4:
+					case ElementType::Count: VORTEX_ASSERT_MSG(false, "Invalid ElementType on shaders")
+						break;
+				}
+			}
+		}
+	}
+	void OpenGL45Backend::Dispatch(const Vortex::Int32* num_groups) {
+		VORTEX_ASSERT(num_groups[0] <= m_HardwareLimits[HardwareLimit::MaxComputeWorkGroupX])
+		VORTEX_ASSERT(num_groups[1] <= m_HardwareLimits[HardwareLimit::MaxComputeWorkGroupY])
+		VORTEX_ASSERT(num_groups[2] <= m_HardwareLimits[HardwareLimit::MaxComputeWorkGroupZ])
+
+		VORTEX_GL_CALL(glDispatchCompute(num_groups[0], num_groups[1], num_groups[2]));
+		VORTEX_GL_CALL(glMemoryBarrier(GL_ALL_BARRIER_BITS));
+	}
+	void OpenGL45Backend::DestroyShader(Handle shader_handle) {
+		VORTEX_ASSERT(d_ShaderChecks(shader_handle))
+		const auto& shader = m_Datas.Get<Shader>(shader_handle);
+
+		auto id = static_cast<GLuint>(shader.BackendID);
+		VORTEX_GL_CALL(glDeleteProgram(id));
+		m_Datas.Destroy(shader_handle);
+	}
+	void OpenGL45Backend::CreateShaderData(Shader& data) {
+		auto gl_id = static_cast<GLuint>(data.BackendID);
+
+		{
+			//retrieve shader uniform count
+			GLsizei uniform_count;
+			VORTEX_GL_CALL(glGetProgramiv(gl_id, GL_ACTIVE_UNIFORMS, &uniform_count));
+
+			GLint sampler_position{0};
+			//Create cache for names and locations of every uniform and attribute in shader.
+			for (GLsizei i = 0; i < uniform_count; i++) {
+				GLsizei length;
+				GLint size;
+				GLenum gl_type;
+				char name[128];
+				VORTEX_GL_CALL(glGetActiveUniform(gl_id, i, 128, &length, &size, &gl_type, name));
+				VORTEX_GL_CALL(GLint location = glGetUniformLocation(gl_id, name));
+
+				HashedString hashed_str{name, static_cast<SizeType>(length) + 1};
+				ElementType::Enum type = FindType(gl_type);
+
+				data.Types[hashed_str] = type;
+				data.Locations[hashed_str] = location;
+
+				if (gl_type == GL_SAMPLER_1D || gl_type == GL_SAMPLER_2D || gl_type == GL_SAMPLER_3D) {
+					data.BindingPositions[hashed_str] = sampler_position;
+					VORTEX_GL_CALL(glProgramUniform1i(gl_id, location, sampler_position));
+					++sampler_position;
+				} else if (gl_type == GL_IMAGE_1D || gl_type == GL_IMAGE_2D || gl_type == GL_IMAGE_3D) {
+					data.BindingPositions[hashed_str] = sampler_position;
+					VORTEX_GL_CALL(glProgramUniform1i(gl_id, location, sampler_position));
+					++sampler_position;
+				}
+
+				VORTEX_LOG_DEBUG("[OpenGL] Cached shader uniform. Location: %i Type: %s Name: %s", location, ElementType::ToString[type], name)
+			}
+		}
+		{
+			GLsizei uniform_block_count;
+			int binding_position{0};
+			VORTEX_GL_CALL(glGetProgramiv(gl_id, GL_ACTIVE_UNIFORM_BLOCKS, &uniform_block_count));
+			for (GLsizei i = 0; i < uniform_block_count; ++i) {
+				GLsizei length;
+				char name[128];
+
+				VORTEX_GL_CALL(glGetActiveUniformBlockName(
+					gl_id,
+					i,
+					128,
+					&length,
+					name));
+
+				HashedString hashed_str{name, static_cast<SizeType>(length) + 1};
+
+				ElementType::Enum type = ElementType::UniformBlock;
+				VORTEX_GL_CALL(GLint location = glGetUniformBlockIndex(gl_id, name));
+
+				data.Types[hashed_str] = type;
+				data.Locations[hashed_str] = location;
+				data.BindingPositions[hashed_str] = binding_position;
+				++binding_position;
+				VORTEX_LOG_DEBUG("[OpenGL] Cached shader uniform block. Location: %i Type: %s Name: %s", location, ElementType::ToString[type], name)
+			}
+		}
+		{
+			GLsizei attribute_count;
+			VORTEX_GL_CALL(glGetProgramiv(gl_id, GL_ACTIVE_ATTRIBUTES, &attribute_count));
+
+			for (GLsizei i = 0; i < attribute_count; i++) {
+				GLsizei length;
+				GLint size;
+				GLenum gl_type;
+				char name[128];
+				VORTEX_GL_CALL(glGetActiveAttrib(gl_id, i, 128, &length, &size, &gl_type, name));
+				VORTEX_GL_CALL(GLint location = glGetAttribLocation(gl_id, name));
+
+				HashedString hashed_str{name, static_cast<SizeType>(length) + 1};
+
+				ElementType::Enum type = FindType(gl_type);
+
+				data.Types[hashed_str] = type;
+				data.Locations[hashed_str] = location;
+				VORTEX_LOG_DEBUG("[OpenGL] Cached shader attribute: %i - %s", location, name)
+			}
+		}
+	}
+
+	Handle OpenGL45Backend::CreateFrameBuffer(const UInt16* size, FrameBufferAttachment::Enum* attachments, SizeType count) {
 		VORTEX_ASSERT(attachments != nullptr)
 		VORTEX_ASSERT(count > 0)
 
-		GLuint id;
-		VORTEX_GL_CALL(glCreateFramebuffers(1, &id));
+		GLuint gl_framebuffer_id;
+		VORTEX_GL_CALL(glCreateFramebuffers(1, &gl_framebuffer_id));
 
 		GLenum color_attachment_slot{0};
 
-		UInt16 width{0};
-		UInt16 height{0};
+		GLenum draw_buffers[FrameBufferAttachment::ColorAttachmentCount];
 
-		GLenum draw_buffers[32];
+		FrameBuffer frame_buffer{};
+		frame_buffer.Size[0] = size[0];
+		frame_buffer.Size[1] = size[1];
 
 		for (SizeType i = 0; i < count; ++i) {
-			auto texture_handle = textures[i];
 			auto attachment_type = attachments[i];
-			VORTEX_ASSERT(IsValid(texture_handle))
-
-			//calculate max size of the textures
-			const auto& tex_data = GetData(texture_handle);
-			if (tex_data.Width > width) width = tex_data.Width;
-			if (tex_data.Height > height) height = tex_data.Height;
+			auto attachment_texture_handle = CreateTexture2D(
+				size,
+				FrameBufferAttachment::Format[attachment_type],
+				nullptr,
+				TextureLODFilter::Linear,
+				TextureLODFilter::Linear,
+				TextureWrap::ClampEdge,
+				TextureWrap::ClampEdge,
+				false
+			);
+			const auto& attachment_texture = m_Datas.Get<Texture>(attachment_texture_handle);
+			auto gl_attachment_texture_id = static_cast<GLuint>(attachment_texture.BackendID);
 
 			GLenum current_attachment_enum;
-			if (attachment_type == FrameBufferAttachment::Color) {
-				current_attachment_enum = OpenGL::FrameBufferAttachment[attachment_type] + color_attachment_slot;
+			if (attachment_type < FrameBufferAttachment::ColorAttachmentCount) {
+				current_attachment_enum = OpenGL45::FrameBufferAttachment[attachment_type] + color_attachment_slot;
 				draw_buffers[color_attachment_slot] = current_attachment_enum;
-				color_attachment_slot++;
+				++color_attachment_slot;
 			} else {
-				current_attachment_enum = OpenGL::FrameBufferAttachment[attachment_type];
+				current_attachment_enum = OpenGL45::FrameBufferAttachment[attachment_type];
 			}
+			VORTEX_GL_CALL(glNamedFramebufferTexture(gl_framebuffer_id, current_attachment_enum, gl_attachment_texture_id, 0));
+			frame_buffer.Textures[attachment_type] = attachment_texture_handle;
 
-			auto tex_id = static_cast<GLuint>(texture_handle.id);
-
-			VORTEX_GL_CALL(glNamedFramebufferTexture(id, current_attachment_enum, tex_id, 0));
-
-			VORTEX_LOG_DEBUG("[OpenGL] Framebuffer: %zu Attachment: %s Texture: %zu", id, FrameBufferAttachment::ToString[attachment_type], texture_handle.id)
+			VORTEX_LOG_DEBUG("[OpenGL] Framebuffer: %zu Attachment: %s Texture: %zu", gl_framebuffer_id, FrameBufferAttachment::ToString[attachment_type], attachment_texture.BackendID)
 		}
 
-		VORTEX_GL_CALL(glNamedFramebufferDrawBuffers(id, color_attachment_slot, draw_buffers));
+		VORTEX_GL_CALL(glNamedFramebufferDrawBuffers(gl_framebuffer_id, color_attachment_slot, draw_buffers));
+		VORTEX_GL_CALL(auto result = glCheckNamedFramebufferStatus(gl_framebuffer_id, GL_FRAMEBUFFER));
 
-		VORTEX_GL_CALL(auto result = glCheckNamedFramebufferStatus(id, GL_FRAMEBUFFER));
 		if (result != GL_FRAMEBUFFER_COMPLETE) {
-			VORTEX_LOG_ERROR("[OpenGL] Incomplete Framebuffer:%s", OpenGL::GetFrameBufferStatus(result));
-			VORTEX_ASSERT(false)
+			VORTEX_LOG_DEBUG("[OpenGL] Incomplete Framebuffer:%s", GetFrameBufferStatus(result))
 		}
 
-		FrameBufferHandle handle{id};
-		FrameBufferData data{
-			width
-			, height
-			, {textures, count}
-			, {attachments, count}
-			, destroy_textures
-		};
+		VORTEX_ASSERT(result == GL_FRAMEBUFFER_COMPLETE)
+		frame_buffer.BackendID = gl_framebuffer_id;
 
-		m_FrameBufferDatas[handle] = data;
+		auto handle = m_Datas.Insert<FrameBuffer>(frame_buffer);
 		return handle;
 	}
-	void OpenGL45Backend::Bind(FrameBufferHandle handle) {
-		VORTEX_ASSERT(IsValid(handle))
-		auto id = static_cast<GLuint>(handle.id);
+	void OpenGL45Backend::BindFrameBuffer(Handle framebuffer_handle) {
+		VORTEX_ASSERT(d_FrameBufferChecks(framebuffer_handle))
+		const auto& framebuffer = m_Datas.Get<FrameBuffer>(framebuffer_handle);
+
+		auto id = static_cast<GLuint>(framebuffer.BackendID);
 		VORTEX_GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, id));
 	}
 	void OpenGL45Backend::BindBackBuffer() {
 		VORTEX_GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 	}
-	void OpenGL45Backend::Destroy(FrameBufferHandle handle) {
-		VORTEX_ASSERT(IsValid(handle))
+	void OpenGL45Backend::DestroyFrameBuffer(Handle framebuffer_handle) {
+		VORTEX_ASSERT(d_FrameBufferChecks(framebuffer_handle))
+		const auto& frame_buffer = m_Datas.Get<FrameBuffer>(framebuffer_handle);
 
-		auto id = static_cast<GLuint>(handle.id);
+		auto id = static_cast<GLuint>(frame_buffer.BackendID);
 		VORTEX_GL_CALL(glDeleteFramebuffers(1, &id));
 
-		const auto& data = m_FrameBufferDatas.at(handle);
-		if (data.DestroyTextures) {
-			for (auto tex_handle : data.Handles) {
-				Destroy(tex_handle);
-			}
+		for (auto tex_handle : frame_buffer.Textures) {
+			DestroyTexture(tex_handle);
 		}
-		m_FrameBufferDatas.erase(handle);
+		m_Datas.Destroy(framebuffer_handle);
 	}
 
+	Handle OpenGL45Backend::CreateTimerQuery() {
+		GLuint id{0};
+		VORTEX_GL_CALL(glGenQueries(1, &id));
+		TimerQuery query{
+			TimerQuery::Stopped
+			, id
+		};
+
+		auto handle = m_Datas.Insert<TimerQuery>(query);
+
+		return handle;
+	}
+	void OpenGL45Backend::BeginTimerQuery(Handle timer_query_handle) {
+		VORTEX_ASSERT(d_TimerQueryChecks(timer_query_handle))
+		auto& query = m_Datas.Get<TimerQuery>(timer_query_handle);
+
+		if (query.State == TimerQuery::Stopped) {
+			auto id = static_cast<GLuint>(query.BackendID);
+			VORTEX_GL_CALL(glBeginQuery(GL_TIME_ELAPSED, id));
+			query.State = TimerQuery::Running;
+		}
+	}
+	bool OpenGL45Backend::EndTimerQuery(Handle timer_query_handle, UInt32& value) {
+		VORTEX_ASSERT(d_TimerQueryChecks(timer_query_handle))
+		auto& query = m_Datas.Get<TimerQuery>(timer_query_handle);
+
+		if (query.State == TimerQuery::Running) {
+			VORTEX_GL_CALL(glEndQuery(GL_TIME_ELAPSED));
+			query.State = TimerQuery::Waiting;
+		}
+
+		if (query.State == TimerQuery::Waiting) {
+			GLint available;
+			auto id = static_cast<GLuint>(query.BackendID);
+			VORTEX_GL_CALL(glGetQueryObjectiv(id, GL_QUERY_RESULT_AVAILABLE, &available));
+
+			if (available) {
+				VORTEX_GL_CALL(glGetQueryObjectuiv(id, GL_QUERY_RESULT, &value));
+				query.State = TimerQuery::Stopped;
+				return true;
+			}
+		}
+		return false;
+	}
+	void OpenGL45Backend::DestroyTimerQuery(Handle timer_query_handle) {
+		VORTEX_ASSERT(d_TimerQueryChecks(timer_query_handle))
+		auto& query = m_Datas.Get<TimerQuery>(timer_query_handle);
+
+		auto id = static_cast<GLuint>(query.BackendID);
+		VORTEX_GL_CALL(glDeleteQueries(1, &id));
+
+		m_Datas.Destroy(timer_query_handle);
+	}
+	SizeType OpenGL45Backend::GetHardwareLimit(HardwareLimit::Enum type) const {
+		return m_HardwareLimits[type];
+	}
 	void OpenGL45Backend::SetState(RenderStates::Enum state, bool active) {
 		VORTEX_ASSERT(state < RenderStates::Count)
 		if (m_ActiveStates[state] != active) {
 			if (active) {
-				VORTEX_GL_CALL(glEnable(OpenGL::States[state]));
+				VORTEX_GL_CALL(glEnable(OpenGL45::States[state]));
 			} else {
-				VORTEX_GL_CALL(glDisable(OpenGL::States[state]));
+				VORTEX_GL_CALL(glDisable(OpenGL45::States[state]));
 			}
 			m_ActiveStates[state] = active;
 		}
 	}
+	bool OpenGL45Backend::IsEnabled(RenderStates::Enum state) const {
+		return m_ActiveStates[state];
+	}
+	void OpenGL45Backend::SetDepthTest(DepthTesting::Enum depth_testing) const {
+		VORTEX_ASSERT(depth_testing < DepthTesting::Count)
+		if (depth_testing == DepthTesting::Disabled) {
+			VORTEX_GL_CALL(glDisable(GL_DEPTH_TEST));
+		} else {
+			VORTEX_GL_CALL(glEnable(GL_DEPTH_TEST));
+			VORTEX_GL_CALL(glDepthMask(GL_TRUE));
+			VORTEX_GL_CALL(glDepthFunc(OpenGL45::DepthTest[depth_testing]));
+		}
+	}
+	void OpenGL45Backend::SetBlending(Blending::Enum blending) const {
+		//disable depth writing when rendering geometry other than opaque.
+		VORTEX_ASSERT(blending < Blending::Count)
+		if (blending == Blending::Disabled) {
+			VORTEX_GL_CALL(glDisable(GL_BLEND));
+			VORTEX_GL_CALL(glDepthMask(GL_TRUE));
+		} else {
+			VORTEX_GL_CALL(glEnable(GL_BLEND));
+			VORTEX_GL_CALL(glDepthMask(GL_FALSE));
+			switch (blending) {
+				case Blending::Additive: {
+					VORTEX_GL_CALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+					break;
+				}
+				case Blending::Subtractive: {
+					VORTEX_GL_CALL(glBlendFunc(GL_DST_COLOR, GL_ZERO));
+					break;
+				}
 
-	void OpenGL45Backend::SetDepthFunction(DepthFunction::Enum func) const {
-		VORTEX_ASSERT(func < DepthFunction::Count)
-		VORTEX_ASSERT(m_ActiveStates[RenderStates::DepthTest])
-		VORTEX_GL_CALL(glDepthFunc(OpenGL::DepthFunc[func]));
+				case Blending::Opaque:
+				case Blending::Count:break;
+			}
+		}
 	}
-	void OpenGL45Backend::SetBlendFunction(BlendFunction::Enum source, BlendFunction::Enum target) const {
-		VORTEX_ASSERT(source < BlendFunction::Count)
-		VORTEX_ASSERT(target < BlendFunction::Count)
-		VORTEX_ASSERT(m_ActiveStates[RenderStates::Blending])
-		VORTEX_GL_CALL(glBlendFunc(OpenGL::BlendFunc[source], OpenGL::BlendFunc[target]));
+	void OpenGL45Backend::SetScissor(const RectangleInt& dimension) const {
+		VORTEX_GL_CALL(glScissor(dimension.x(), dimension.y(), dimension.Width(), dimension.Height()));
 	}
-
-	void OpenGL45Backend::SetScissor(const Int32* dimension) const {
-		VORTEX_ASSERT(dimension != nullptr)
-		VORTEX_ASSERT(m_ActiveStates[RenderStates::ScissorTest])
-		VORTEX_GL_CALL(glScissor(dimension[0], dimension[1], dimension[2], dimension[3]));
+	void OpenGL45Backend::SetViewport(const RectangleInt& size) const {
+		VORTEX_GL_CALL(glViewport(size.x(), size.y(), size.Width(), size.Height()));
 	}
-	void OpenGL45Backend::SetViewport(const Int32* size) const {
-		VORTEX_ASSERT(size != nullptr)
-		VORTEX_GL_CALL(glViewport(size[0], size[1], size[2], size[3]));
-	}
-
-	void OpenGL45Backend::ClearColor(const float* color) const {
-		VORTEX_ASSERT(color != nullptr)
-		VORTEX_GL_CALL(glClearColor(color[0], color[1], color[2], color[3]));
+	void OpenGL45Backend::ClearColor(const Color& color) const {
+		VORTEX_GL_CALL(glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE));
+		VORTEX_GL_CALL(glClearColor(color.Red(), color.Green(), color.Blue(), color.Alpha()));
 		VORTEX_GL_CALL(glClear(GL_COLOR_BUFFER_BIT));
 	}
 	void OpenGL45Backend::ClearDepth(float reset) const {
+		VORTEX_GL_CALL(glDepthMask(GL_TRUE));
 		VORTEX_GL_CALL(glClearDepthf(reset));
 		VORTEX_GL_CALL(glClear(GL_DEPTH_BUFFER_BIT));
 	}
 	void OpenGL45Backend::ClearStencil(UInt32 reset) const {
+		VORTEX_GL_CALL(glStencilMask(GL_TRUE));
 		VORTEX_GL_CALL(glClearStencil(reset));
 		VORTEX_GL_CALL(glClear(GL_STENCIL_BUFFER_BIT));
 	}
-	void OpenGL45Backend::Draw(VertexArrayHandle handle, SizeType count) const {
-		VORTEX_ASSERT(IsValid(handle))
-		const auto& data = m_VertexArrayDatas.at(handle);
-		auto gl_id = static_cast<GLuint>(handle.id);
-
-		VORTEX_GL_CALL(glBindVertexArray(gl_id));
-		if (data.Indexed) {
-			auto index_buffer_h = data.IndexBufferHandle;
-			VORTEX_ASSERT(IsValid(index_buffer_h))
-
-			const auto& ibo_data = m_BufferDatas.at(index_buffer_h);
-			auto type = ibo_data.Layout[0].Type;
-
-			VORTEX_ASSERT(type == RenderElementType::UInt1 || type == RenderElementType::UShort1 || type == RenderElementType::UByte1)
-
-			VORTEX_GL_CALL(glDrawElements(
-				OpenGL::Topology[data.Topology],
-				count,
-				OpenGL::RenderElementType[type],
-				nullptr
-			));
-		} else {
-			VORTEX_GL_CALL(glDrawArrays(
-				OpenGL::Topology[data.Topology],
-				0,
-				count
-			));
-		}
-	}
-	void OpenGL45Backend::DrawInstanced(VertexArrayHandle handle, SizeType count, SizeType instance_count) const {
-		VORTEX_ASSERT(IsValid(handle))
-		const auto& data = m_VertexArrayDatas.at(handle);
-		auto gl_id = static_cast<GLuint>(handle.id);
-
-		VORTEX_GL_CALL(glBindVertexArray(gl_id));
-		if (data.Indexed) {
-			auto index_buffer_h = data.IndexBufferHandle;
-			VORTEX_ASSERT(IsValid(index_buffer_h))
-
-			const auto& ibo_data = m_BufferDatas.at(index_buffer_h);
-			auto type = ibo_data.Layout[0].Type;
-
-			VORTEX_ASSERT(type == RenderElementType::UInt1 || type == RenderElementType::UShort1 || type == RenderElementType::UByte1)
-
-			VORTEX_GL_CALL(glDrawElementsInstanced(
-				OpenGL::Topology[data.Topology],
-				count,
-				OpenGL::RenderElementType[type],
-				nullptr,
-				instance_count
-			));
-		} else {
-			VORTEX_GL_CALL(glDrawArraysInstanced(
-				OpenGL::Topology[data.Topology],
-				0,
-				count,
-				instance_count
-			));
-		}
-	}
 }
+
+/*
+#include "windows.h"
+
+extern "C" {
+_declspec(dllexport)
+DWORD NvOptimusEnablement = 0x00000001;
+}*/

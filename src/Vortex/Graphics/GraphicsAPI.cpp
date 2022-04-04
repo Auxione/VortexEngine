@@ -1,5 +1,3 @@
-#include "Vortex/Memory/HeapAllocator.h"
-#include "Vortex/Debug/Assert.h"
 #include "Vortex/Graphics/GraphicsAPI.h"
 
 #include "OpenGL45Backend.h"
@@ -14,14 +12,14 @@ namespace Vortex {
 		VORTEX_ASSERT(Vortex::s_WindowBackend == nullptr)
 
 		if (graphics == GraphicsBackendType::OpenGL45) {
-			Vortex::s_WindowBackend = GetHeapAllocator()->New<Vortex::Graphics::GLFWBackend>(graphics, resolution, title);
+			Vortex::s_WindowBackend = new Vortex::Graphics::GLFWBackend(graphics, resolution, title);
 			//glfwGetProcAddress must be in GLFWbackend
-			Vortex::s_RenderBackend = GetHeapAllocator()->New<Vortex::Graphics::OpenGL45Backend>((GLADloadproc) glfwGetProcAddress);
+			Vortex::s_RenderBackend = new Vortex::Graphics::OpenGL45Backend();
 		}
 		VORTEX_ASSERT(Vortex::s_WindowBackend != nullptr)
 		VORTEX_ASSERT(Vortex::s_RenderBackend != nullptr)
 
-		Vortex::s_Renderer = GetHeapAllocator()->New<Vortex::Graphics::Renderer>(Vortex::s_RenderBackend, resolution);
+		Vortex::s_Renderer = new Vortex::Graphics::Renderer(Vortex::s_RenderBackend, resolution);
 	}
 
 	Graphics::WindowBackend* GetWindowBackend() {
@@ -41,8 +39,8 @@ namespace Vortex {
 		VORTEX_ASSERT(Vortex::s_WindowBackend != nullptr)
 		VORTEX_ASSERT(Vortex::s_RenderBackend != nullptr)
 
-		GetHeapAllocator()->Delete(Vortex::s_Renderer);
-		GetHeapAllocator()->Delete(Vortex::s_RenderBackend);
-		GetHeapAllocator()->Delete(Vortex::s_WindowBackend);
+		delete Vortex::s_Renderer;
+		delete Vortex::s_RenderBackend;
+		delete Vortex::s_WindowBackend;
 	}
 }

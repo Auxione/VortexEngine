@@ -2,7 +2,7 @@
 #include "Vortex/Memory/Memory.h"
 
 namespace Vortex::Graphics {
-	namespace RenderLimits {
+	namespace HardwareLimit {
 		enum Enum {
 			MaxTextureSize,
 			MaxTextureLayers,
@@ -14,6 +14,10 @@ namespace Vortex::Graphics {
 			MaxDrawBuffers,
 
 			MaxVertexAttributes,
+
+			MaxComputeWorkGroupX,
+			MaxComputeWorkGroupY,
+			MaxComputeWorkGroupZ,
 
 			Count
 		};
@@ -29,6 +33,10 @@ namespace Vortex::Graphics {
 			, "MaxDrawBuffers"
 
 			, "MaxVertexAttributes"
+
+			, "MaxComputeWorkGroupX"
+			, "MaxComputeWorkGroupY"
+			, "MaxComputeWorkGroupZ"
 		};
 	}
 
@@ -47,8 +55,8 @@ namespace Vortex::Graphics {
 		};
 		constexpr static const char* ToString[]{
 			"TriangleList"
-			, "TriangleFan"
 			, "TriangleStrip"
+			, "TriangleFan"
 
 			, "LineList"
 			, "LineStrip"
@@ -228,7 +236,8 @@ namespace Vortex::Graphics {
 
 			Count,
 
-			Disabled = Never
+			Disabled = Never,
+			Null = Count
 		};
 	}
 
@@ -240,7 +249,8 @@ namespace Vortex::Graphics {
 
 			Count,
 
-			Disabled = Opaque
+			Disabled = Opaque,
+			Null = Count
 		};
 		constexpr static const char* ToString[]{
 			"Opaque"
@@ -251,15 +261,42 @@ namespace Vortex::Graphics {
 
 	namespace FrameBufferAttachment {
 		enum Enum {
-			Color,
+			Color0,
+			Color1,
+			Color2,
+			Color3,
+
+			ColorAttachmentCount,
+
 			Depth,
 			Stencil,
 			DepthStencil,
 
 			Count
 		};
+
+		constexpr static PixelFormat::Enum Format[]{
+			PixelFormat::RGBA_F32        //Color0
+			, PixelFormat::RGBA_F32        //Color1
+			, PixelFormat::RGBA_F32        //Color2
+			, PixelFormat::RGBA_F32        //Color3
+
+			, PixelFormat::Count        //ColorAttachmentCount
+
+			, PixelFormat::Depth_F32    //Depth
+			, PixelFormat::Stencil_UI8    //Stencil
+			, PixelFormat::DepthStencil    //DepthStencil
+
+			, PixelFormat::Count        //Count
+		};
 		constexpr static const char* ToString[]{
-			"Color"
+			"Color0"
+			, "Color1"
+			, "Color2"
+			, "Color3"
+
+			, "ColorAttachmentCount"
+
 			, "Depth"
 			, "Stencil"
 			, "DepthStencil"
@@ -317,6 +354,15 @@ namespace Vortex::Graphics {
 
 			SamplerTypeCount,
 
+			Image1D,
+			Image2D,
+			Image3D,
+
+			ImageTypeCount,
+
+			UniformBlock,
+			StorageBlock,
+
 			Count
 		};
 
@@ -363,7 +409,6 @@ namespace Vortex::Graphics {
 			, sizeof(UInt16) * 4        //UShort4
 
 			, 0        //IntegerTypeCount
-
 		};
 
 		constexpr static const UInt16 ComponentCount[]{
@@ -409,12 +454,6 @@ namespace Vortex::Graphics {
 			, 4    //UShort4
 
 			, 0    //IntegerTypeCount
-
-			, 1    //Sampler1D
-			, 1    //Sampler2D
-			, 1    //Sampler3D
-
-			, 0    //SamplerTypeCount
 		};
 
 		constexpr static const char* ToString[]{
@@ -465,18 +504,30 @@ namespace Vortex::Graphics {
 			, "Sampler2D"
 			, "Sampler3D"
 
+			, "Image1D"
+			, "Image2D"
+			, "Image3D"
+
 			, "SamplerTypeCount"
+
+			, "UniformBlock"
+			, "StorageBlock"
 		};
 	}
 
 	namespace ViewLayer {
 		enum Enum {
 			World = 0,
-			HUD
+			HUD,
+			PostProcess,
+
+			Count,
+			Null = Count
 		};
 		constexpr const char* ToString[]{
 			"World"
 			, "HUD"
+			, "PostProcess"
 		};
 	}
 

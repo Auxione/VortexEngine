@@ -61,6 +61,22 @@ namespace Vortex::OpenGL45 {
 			, GL_FLOAT                // RGBA_F32
 			, GL_UNSIGNED_INT_24_8    // DepthStencil
 		};
+
+		constexpr static GLenum ImageTexture[]{
+			GL_R8UI                // Red_UI8
+			, GL_R8UI        // Alpha_UI8
+			, GL_RGB8UI        // RGB_UI8
+			, GL_RGBA8UI        // RGBA_UI8
+			, GL_R8UI        // Stencil_UI8
+			, GL_R32UI        // Red_UI32
+			, GL_R32UI        // Alpha_UI32
+			, GL_R32F                // Depth_F32
+			, GL_R32F                // Red_F32
+			, GL_R32F                // Alpha_F32
+			, GL_RGB32F                // RGB_F32
+			, GL_RGBA32F                // RGBA_F32
+			, GL_NONE    // DepthStencil
+		};
 	}
 
 	constexpr static GLint TextureWrapType[]{
@@ -117,14 +133,20 @@ namespace Vortex::OpenGL45 {
 	};
 
 	constexpr static GLenum FrameBufferAttachment[]{
-		GL_COLOR_ATTACHMENT0,        // Color
+		GL_COLOR_ATTACHMENT0,        // Color0
+		GL_COLOR_ATTACHMENT1,        // Color1
+		GL_COLOR_ATTACHMENT2,        // Color2
+		GL_COLOR_ATTACHMENT3,        // Color3
+
+		GL_NONE,                    //ColorAttachmentCount
+
 		GL_DEPTH_ATTACHMENT,        // Depth
 		GL_STENCIL_ATTACHMENT,        // Stencil
 		GL_DEPTH_STENCIL_ATTACHMENT    // DepthStencil
 	};
 
-	constexpr static GLenum ElementType[]{
-		GL_FLOAT,    	//Float1
+	constexpr static GLenum UniformElementType[]{
+		GL_FLOAT,        //Float1
 		GL_FLOAT_VEC2,  //Float2
 		GL_FLOAT_VEC3,  //Float3
 		GL_FLOAT_VEC4,  //Float4
@@ -140,7 +162,7 @@ namespace Vortex::OpenGL45 {
 		GL_INT_VEC3,   //Int3
 		GL_INT_VEC4,   //Int4
 
-		GL_UNSIGNED_INT,		//UInt1
+		GL_UNSIGNED_INT,        //UInt1
 		GL_UNSIGNED_INT_VEC2,   //UInt2
 		GL_UNSIGNED_INT_VEC3,   //UInt3
 		GL_UNSIGNED_INT_VEC4,   //UInt4
@@ -171,6 +193,57 @@ namespace Vortex::OpenGL45 {
 		GL_SAMPLER_2D,    //Sampler2D
 		GL_SAMPLER_3D,    //Sampler3D
 
-		0            //SamplerTypeCount
+		0,            //SamplerTypeCount
+
+		GL_IMAGE_2D,    //Image1D
+		GL_IMAGE_2D,    //Image2D
+		GL_IMAGE_2D,    //Image3D
+
+		0            //ImageTypeCount
+	};
+
+	constexpr static GLenum BufferElementType[]{
+		GL_FLOAT,        //Float1
+		GL_FLOAT,  //Float2
+		GL_FLOAT,  //Float3
+		GL_FLOAT,  //Float4
+
+		GL_FLOAT,    //Matrix2
+		GL_FLOAT,    //Matrix3
+		GL_FLOAT,    //Matrix4
+
+		0,            //FloatingTypeCount
+
+		GL_INT,        //Int1
+		GL_INT,   //Int2
+		GL_INT,   //Int3
+		GL_INT,   //Int4
+
+		GL_UNSIGNED_INT,        //UInt1
+		GL_UNSIGNED_INT,   //UInt2
+		GL_UNSIGNED_INT,   //UInt3
+		GL_UNSIGNED_INT,   //UInt4
+
+		GL_BYTE,        //Byte1
+		GL_BYTE,        //Byte2
+		GL_BYTE,        //Byte3
+		GL_BYTE,        //Byte4
+
+		GL_UNSIGNED_BYTE,    //UByte1
+		GL_UNSIGNED_BYTE,    //UByte2
+		GL_UNSIGNED_BYTE,    //UByte3
+		GL_UNSIGNED_BYTE,    //UByte4
+
+		GL_SHORT,        //Short1
+		GL_SHORT,        //Short2
+		GL_SHORT,        //Short3
+		GL_SHORT,        //Short4
+
+		GL_UNSIGNED_SHORT,    //UShort1
+		GL_UNSIGNED_SHORT,    //UShort2
+		GL_UNSIGNED_SHORT,    //UShort3
+		GL_UNSIGNED_SHORT,    //UShort4
+
+		0            //IntegerTypeCount
 	};
 }

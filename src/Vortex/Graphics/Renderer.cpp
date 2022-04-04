@@ -3,354 +3,522 @@
 
 namespace Vortex::Graphics {
 	Renderer::Renderer(RenderBackend* render_backend, const Int32* resolution)
-		: m_NextMeshHandle{0},
-		  m_NextMaterialHandle{0},
-		  m_NextViewHandle{0},
-		  m_RenderBackend{render_backend},
-		  StandardProgram{} {
+		: m_RenderBackend{render_backend},
+		  m_RenderTimerQuery{m_RenderBackend->CreateTimerQuery()},
+		  m_RenderTime{0},
+		  m_ComputeShaderTimerQuery{m_RenderBackend->CreateTimerQuery()},
+		  m_ComputeShaderTime{0},
 
-		CreateStandardAssets(resolution);
+		  DefaultView{} {
+
+		GenerateDefaultView(resolution);
 	}
 
 	Renderer::~Renderer() {
-		VORTEX_ASSERT(m_RenderBackend != nullptr)
-		for (const auto& node : m_MeshDatas) {
-			const auto& mesh_data = node.second;
-			m_RenderBackend->Destroy(mesh_data.IndexBuffer);
-			m_RenderBackend->Destroy(mesh_data.PositionBuffer);
-			m_RenderBackend->Destroy(mesh_data.UV0Buffer);
-			m_RenderBackend->Destroy(mesh_data.UV1Buffer);
-			m_RenderBackend->Destroy(mesh_data.ColorBuffer);
-			m_RenderBackend->Destroy(mesh_data.VertexArray);
-		}
-		m_RenderBackend->Destroy(StandardProgram);
-		m_RenderBackend->Destroy(StandardWhiteTexture);
-		m_RenderBackend->Destroy(StandardErrorTexture);
-	}
+		VORTEX_LOG_DEBUG("[Renderer] Shutdown begin.")
+		DestroyView(DefaultView);
+		m_RenderBackend->DestroyTimerQuery(m_ComputeShaderTimerQuery);
+		m_RenderBackend->DestroyTimerQuery(m_RenderTimerQuery);
 
-	void Renderer::CreateStandardAssets(const Int32* resolution) {
-		char vertex_shader_source[]{
-			R"(
-#version 450 core
-
-layout(location = 0) in vec3 a_position;
-layout(location = 1) in vec4 a_color;
-layout(location = 2) in vec2 a_uv0;
-layout(location = 3) in vec2 a_uv1;
-
-out vec4 vertex_color;
-out vec2 vertex_uv0;
-out vec2 vertex_uv1;
-
-uniform mat4 Mat4_Projection;
-uniform mat4 Mat4_View;
-uniform mat4 Mat4_Model;
-
-void main(){
-	vertex_color = a_color;
-	vertex_uv0 = a_uv0;
-	vertex_uv1 = a_uv1;
-	gl_Position = Mat4_Projection * Mat4_View * Mat4_Model * vec4(a_position, 1.0f);
-}
-			)"
-		};
-
-		char fragment_shader_source[]{
-			R"(
-#version 450 core
-
-uniform sampler2D Texture0;
-uniform sampler2D Texture1;
-
-in vec4 vertex_color;
-in vec2 vertex_uv0;
-in vec2 vertex_uv1;
-
-void main() {
-	vec4 tex0_color = texture2D(Texture0, vertex_uv0);
-	vec4 tex1_color = texture2D(Texture1, vertex_uv1);
-
-	gl_FragColor = vertex_color * tex0_color * tex1_color;
-}
-			)"
-		};
-
-		Vortex::Graphics::ShaderHandle handle[2];
-		handle[0] = m_RenderBackend->CreateShader(Vortex::Graphics::ShaderType::Vertex, vertex_shader_source);
-		handle[1] = m_RenderBackend->CreateShader(Vortex::Graphics::ShaderType::Fragment, fragment_shader_source);
-
-		StandardProgram = m_RenderBackend->CreateProgram(handle, 2, true);
-		m_RenderBackend->SetShaderInt1(StandardProgram, "Texture0", 0);
-		m_RenderBackend->SetShaderInt1(StandardProgram, "Texture1", 1);
-
-		UInt8 white_texture[]{
-			255, 255, 255, 255
-			, 255, 255, 255, 255
-			, 255, 255, 255, 255
-			, 255, 255, 255, 255
-		};
-		StandardWhiteTexture = m_RenderBackend->CreateTexture2D(2, 2, PixelFormat::RGBA_UI8, white_texture);
-
-		UInt8 error_texture[]{
-			255, 0, 255
-			, 0, 0, 0
-			, 0, 0, 0
-			, 255, 0, 255
-		};
-		StandardErrorTexture = m_RenderBackend->CreateTexture2D(2, 2, PixelFormat::RGB_UI8, error_texture);
-
-		float identity_matrix[]{
-			1.0f, 0.0f, 0.0f, 0.0f
-			, 0.0f, 1.0f, 0.0f, 0.0f
-			, 0.0f, 0.0f, 1.0f, 0.0f
-			, 0.0f, 0.0f, 0.0f, 1.0f
-		};
-
-		Int32 viewport[]{
-			0, 0, resolution[0], resolution[1]
-		};
-
-		float projection_mat[16];
-		std::memcpy(projection_mat, identity_matrix, 16 * sizeof(float));
-		{
-			float left = 0.0f;
-			float right = static_cast<float>(resolution[0]);
-			float bottom = static_cast<float>(resolution[1]);
-			float top = 0.0f;
-			float near = -10.0f;
-			float far = 10.0f;
-
-			float dRL_inv = 1.0f / (right - left);
-			float dTB_inv = 1.0f / (top - bottom);
-			float dNF_inv = 1.0f / (near - far);
-
-			projection_mat[0] = 2.0f * dRL_inv;
-			projection_mat[5] = 2.0f * dTB_inv;
-			projection_mat[10] = 2.0f * dNF_inv;
-
-			projection_mat[12] = -(right + left) * dRL_inv;
-			projection_mat[13] = -(top + bottom) * dTB_inv;
-			projection_mat[14] = -(far + near) * dNF_inv;
-			projection_mat[15] = 1.0f;
-		}
-
-		DefaultView = CreateView(viewport, projection_mat, identity_matrix);
-	}
-
-	MeshHandle Renderer::CreateMesh(Topology::Enum topology, SizeType vertex_count, SizeType index_count) {
-		VORTEX_ASSERT(m_RenderBackend != nullptr)
-
-		auto vertex_array = m_RenderBackend->CreateVertexArray(topology);
-		auto index_buffer = m_RenderBackend->CreateBuffer(BufferUsage::DynamicDraw, {RenderElementType::UInt1}, index_count, nullptr);
-
-		auto position_buffer = m_RenderBackend->CreateBuffer(BufferUsage::DynamicDraw, {RenderElementType::Float3}, vertex_count * 3, nullptr);
-		auto color_buffer = m_RenderBackend->CreateBuffer(BufferUsage::DynamicDraw, {RenderElementType::Float4}, vertex_count * 4, nullptr);
-		auto uv0_buffer = m_RenderBackend->CreateBuffer(BufferUsage::DynamicDraw, {RenderElementType::Float2}, vertex_count * 2, nullptr);
-		auto uv1_buffer = m_RenderBackend->CreateBuffer(BufferUsage::DynamicDraw, {RenderElementType::Float2}, vertex_count * 2, nullptr);
-
-		m_RenderBackend->SetIndexBuffer(vertex_array, index_buffer);
-		m_RenderBackend->AddVertexBuffer(vertex_array, position_buffer);
-		m_RenderBackend->AddVertexBuffer(vertex_array, color_buffer);
-		m_RenderBackend->AddVertexBuffer(vertex_array, uv0_buffer);
-		m_RenderBackend->AddVertexBuffer(vertex_array, uv1_buffer);
-
-		MeshHandle handle{m_NextMeshHandle};
-		++m_NextMeshHandle;
-		MeshData data{
-			vertex_array
-			, index_buffer
-			, position_buffer
-			, color_buffer
-			, uv0_buffer
-			, uv1_buffer
-			, index_count
-		};
-
-		m_MeshDatas[handle] = data;
-		return handle;
-	}
-	void Renderer::Destroy(MeshHandle handle) {
-		VORTEX_ASSERT(m_RenderBackend != nullptr)
-		VORTEX_ASSERT(IsValid(handle))
-		const auto& mesh_data = m_MeshDatas.at(handle);
-
-		m_RenderBackend->Destroy(mesh_data.IndexBuffer);
-		m_RenderBackend->Destroy(mesh_data.PositionBuffer);
-		m_RenderBackend->Destroy(mesh_data.UV0Buffer);
-		m_RenderBackend->Destroy(mesh_data.UV1Buffer);
-		m_RenderBackend->Destroy(mesh_data.ColorBuffer);
-		m_RenderBackend->Destroy(mesh_data.VertexArray);
-
-		m_MeshDatas.erase(handle);
-	}
-
-	void Renderer::SetIndices(MeshHandle handle, const UInt32* data, SizeType count) {
-		VORTEX_ASSERT(m_RenderBackend != nullptr)
-		VORTEX_ASSERT(IsValid(handle))
-		auto& mesh_data = m_MeshDatas.at(handle);
-		m_RenderBackend->UpdateBuffer(mesh_data.IndexBuffer, 0, count * sizeof(UInt32), data);
-		mesh_data.IndexCount = count;
-	}
-	void Renderer::SetPositions(MeshHandle handle, const float* data, SizeType count) {
-		VORTEX_ASSERT(m_RenderBackend != nullptr)
-		VORTEX_ASSERT(IsValid(handle))
-		const auto& mesh_data = m_MeshDatas.at(handle);
-		m_RenderBackend->UpdateBuffer(mesh_data.PositionBuffer, 0, count * sizeof(float) * 3, data);
-	}
-	void Renderer::SetColors(MeshHandle handle, const float* data, SizeType count) {
-		VORTEX_ASSERT(m_RenderBackend != nullptr)
-		VORTEX_ASSERT(IsValid(handle))
-		const auto& mesh_data = m_MeshDatas.at(handle);
-		m_RenderBackend->UpdateBuffer(mesh_data.ColorBuffer, 0, count * sizeof(float) * 4, data);
-	}
-
-	void Renderer::SetUV0(MeshHandle handle, const float* data, SizeType count) {
-		VORTEX_ASSERT(m_RenderBackend != nullptr)
-		VORTEX_ASSERT(IsValid(handle))
-		const auto& mesh_data = m_MeshDatas.at(handle);
-		m_RenderBackend->UpdateBuffer(mesh_data.UV0Buffer, 0, count * sizeof(float) * 2, data);
-	}
-	void Renderer::SetUV1(MeshHandle handle, const float* data, SizeType count) {
-		VORTEX_ASSERT(m_RenderBackend != nullptr)
-		VORTEX_ASSERT(IsValid(handle))
-		const auto& mesh_data = m_MeshDatas.at(handle);
-		m_RenderBackend->UpdateBuffer(mesh_data.UV1Buffer, 0, count * sizeof(float) * 2, data);
-	}
-
-	MaterialHandle Renderer::CreateMaterial(ProgramHandle shader, TextureHandle texture0) {
-		MaterialHandle handle{m_NextMaterialHandle};
-		++m_NextMaterialHandle;
-		MaterialData data{
-			shader
-			, texture0
-			, StandardWhiteTexture
-		};
-
-		m_MaterialDatas[handle] = data;
-		return handle;
-	}
-	void Renderer::Destroy(MaterialHandle handle) {
-		VORTEX_ASSERT(m_RenderBackend != nullptr)
-		VORTEX_ASSERT(IsValid(handle))
-		const auto& mat_data = m_MaterialDatas.at(handle);
-
-		m_MaterialDatas.erase(handle);
-	}
-
-	ViewHandle Renderer::CreateView(const Int32* viewport, const float* projection_matrix, const float* view_matrix) {
-		ViewHandle handle{m_NextViewHandle};
-		++m_NextViewHandle;
-		ViewData data;
-
-		float color[]{0.2f, 0.3f, 0.3f, 1.0f};
-		std::memcpy(data.Viewport, viewport, 4 * sizeof(float));
-		std::memcpy(data.ClearColor, color, 4 * sizeof(float));
-		std::memcpy(data.ProjectionMatrix, projection_matrix, 16 * sizeof(float));
-		std::memcpy(data.ViewMatrix, view_matrix, 16 * sizeof(float));
-
-		m_ViewDatas[handle] = data;
-		return handle;
-	}
-	void Renderer::Destroy(ViewHandle handle) {
-		VORTEX_ASSERT(IsValid(handle))
-
-		m_ViewDatas.erase(handle);
-	}
-
-	void Renderer::Process() {
-		//calculate depths
-		for (auto& command :  m_DrawCommands) {
-			const auto& view_position_mat = m_ViewDatas.at(command.GetView()).ViewMatrix;
-			const auto& mesh_position_mat = command.m_TransformMatrix;
-
-			float mesh_position[3]{
-				mesh_position_mat[12]
-				, mesh_position_mat[13]
-				, mesh_position_mat[14]
-			};
-			float view_position[3]{
-				view_position_mat[12]
-				, view_position_mat[13]
-				, view_position_mat[14]
-			};
-
-			float spr_dist{0};
-			for (int i = 0; i < 3; ++i) {
-				spr_dist += mesh_position[i] + view_position[i];
-			}
-			command.SetDepth(static_cast<UInt32>(spr_dist));
-		}
-
-		std::sort(m_DrawCommands.Data(), m_DrawCommands.Data() + m_DrawCommands.Size());
-
-		MaterialHandle current_material;
-		ViewHandle current_view;
-		Translucency::Enum current_translucency{Translucency::Opaque};
-
-		const ViewData* view_data_ptr{nullptr};
-		const MaterialData* material_data_ptr{nullptr};
-
-		m_RenderBackend->SetState(RenderStates::Blending, false);
-
-		for (const auto& command :  m_DrawCommands) {
-			auto mesh_handle = command.GetMesh();
-			auto mat_handle = command.GetMaterial();
-			auto view_handle = command.GetView();
-			const auto* transform = command.GetTransform();
-			auto translucency = command.GetTranslucency();
-
-			//set translucency
-			if (current_translucency != translucency) {
-				current_translucency = translucency;
-				switch (translucency) {
-					case Translucency::Opaque: {
-						m_RenderBackend->SetState(RenderStates::Blending, false);
-						break;
-					}
-					case Translucency::Additive: {
-						m_RenderBackend->SetState(RenderStates::Blending, true);
-						m_RenderBackend->SetBlendFunction(BlendFunction::SourceAlpha, BlendFunction::OneMinusSourceAlpha);
-						break;
-					}
-					case Translucency::Subtractive: {
-						m_RenderBackend->SetState(RenderStates::Blending, true);
-						m_RenderBackend->SetBlendFunction(BlendFunction::DestinationColor, BlendFunction::Zero);
-						break;
-					}
+#ifdef VORTEX_DEBUG
+		if (!m_Datas.d_ActiveIDs.empty()) {
+			VORTEX_LOG_DEBUG("[Renderer] following handles was active:")
+			for (auto handle : m_Datas.d_ActiveIDs) {
+				if (m_Datas.Is<Mesh>(handle)) {
+					VORTEX_LOG_DEBUG("[Renderer] Mesh %u", handle)
+				} else if (m_Datas.Is<Material>(handle)) {
+					VORTEX_LOG_DEBUG("[Renderer] Material %u", handle)
+				} else if (m_Datas.Is<View>(handle)) {
+					VORTEX_LOG_DEBUG("[Renderer] View %u", handle)
+				} else if (m_Datas.Is<ComputeShader>(handle)) {
+					VORTEX_LOG_DEBUG("[Renderer] ComputeShader %u", handle)
 				}
 			}
+		}
+#endif
+		VORTEX_LOG_DEBUG("[Renderer] Shutdown end.")
+	}
 
-			//set view
-			if (current_view != view_handle) {
-				current_view = view_handle;
-				view_data_ptr = &m_ViewDatas.at(current_view);
+	Handle Renderer::CreateComputeShader(const char* source, OnComputeShaderBindFn on_compute_shader_bind) {
+		ShaderType::Enum type{ShaderType::Compute};
 
-				m_RenderBackend->ClearColor(view_data_ptr->ClearColor);
-				m_RenderBackend->SetViewport(view_data_ptr->Viewport);
+		auto shader_handle = m_RenderBackend->CreateShader(&source, &type, 1);
+		auto handle = m_Datas.Insert<ComputeShader>(
+			{
+				shader_handle
+				, on_compute_shader_bind
 			}
+		);
+		return handle;
+	}
+	void Renderer::DestroyComputeShader(Handle handle) {
+		VORTEX_ASSERT(m_Datas.Is<ComputeShader>(handle))
+		const auto& compute_shader = m_Datas.Get<ComputeShader>(handle);
 
-			//set material
-			if (current_material != mat_handle) {
-				current_material = mat_handle;
-				material_data_ptr = &m_MaterialDatas.at(mat_handle);
+		m_RenderBackend->DestroyShader(compute_shader.Shader);
 
-				m_RenderBackend->Bind(material_data_ptr->Program);
+	}
 
-				const float* projection_mat = view_data_ptr->ProjectionMatrix;
-				const float* view_mat = view_data_ptr->ViewMatrix;
+	Handle Renderer::CreateMesh(
+		Topology::Enum topology,
+		BufferUsage::Enum usage,
+		const MeshAttribute::Enum* attributes,
+		SizeType attribute_count,
+		SizeType vertex_count,
+		SizeType index_count) {
+		VORTEX_ASSERT(attributes != nullptr)
+		VORTEX_ASSERT(attribute_count < MeshAttribute::Count)
 
-				m_RenderBackend->SetShaderMatrix4(material_data_ptr->Program, "Mat4_Projection", false, projection_mat);
-				m_RenderBackend->SetShaderMatrix4(material_data_ptr->Program, "Mat4_View", false, view_mat);
+		auto vertex_array = m_RenderBackend->CreateVertexArray(topology);
+		auto index_buffer = m_RenderBackend->CreateBuffer(usage, {{ElementType::UInt1}}, index_count, nullptr);
+		m_RenderBackend->SetIndexBuffer(vertex_array, index_buffer);
 
-				m_RenderBackend->Bind(material_data_ptr->Texture0, 0);
-				m_RenderBackend->Bind(material_data_ptr->Texture1, 1);
+		Mesh data{
+			vertex_array
+			, index_buffer
+			, {0}
+			, index_count
+			, index_count
+			, vertex_count
+		};
+
+#ifdef VORTEX_DEBUG
+		//raise assert on duplicates
+		for (int i = 0; i < attribute_count; ++i) {
+			for (int j = 0; j < attribute_count; ++j) {
+				if (i == j) continue;
+				VORTEX_ASSERT(attributes[i] != attributes[j])
 			}
-			const auto& mesh_data = m_MeshDatas.at(mesh_handle);
+		}
+#endif
 
-			m_RenderBackend->SetShaderMatrix4(material_data_ptr->Program, "Mat4_Model", false, transform);
-			m_RenderBackend->Draw(mesh_data.VertexArray, mesh_data.IndexCount);
+		for (int i = 0; i < attribute_count; ++i) {
+			auto attribute = attributes[i];
+			auto attribute_element_type = MeshAttribute::ElementType[attribute];
+			auto attribute_element_size = ElementType::Size[attribute_element_type];
+
+			auto buffer = CreateBuffer(
+				usage,
+				{{attribute_element_type}},
+				vertex_count * attribute_element_size,
+				nullptr
+			);
+			data.Buffers[attribute] = buffer;
+			m_RenderBackend->AddVertexBuffer(vertex_array, buffer);
 		}
 
-		m_DrawCommands.Clear();
+		auto handle = m_Datas.Insert<Mesh>(data);
+
+		return handle;
 	}
+	void Renderer::SetMeshIndexCount(Handle mesh_handle, SizeType count) {
+		VORTEX_ASSERT(m_Datas.Contains(mesh_handle))
+		VORTEX_ASSERT(m_Datas.Is<Mesh>(mesh_handle))
+		auto& mesh = m_Datas.Get<Mesh>(mesh_handle);
+
+		if (count < mesh.IndexCapacity) {
+			mesh.IndexCount = count;
+		} else {
+			mesh.IndexCount = mesh.IndexCapacity;
+		}
+	}
+	void Renderer::SetMeshIndices(Handle mesh_handle, const UInt32* data, SizeType count) {
+		VORTEX_ASSERT(m_Datas.Contains(mesh_handle))
+		VORTEX_ASSERT(m_Datas.Is<Mesh>(mesh_handle))
+		auto& mesh = m_Datas.Get<Mesh>(mesh_handle);
+
+		if (count > mesh.IndexCapacity) {
+			count = mesh.IndexCapacity;
+		}
+
+		m_RenderBackend->UpdateBuffer(mesh.IndexBuffer, 0, count * sizeof(UInt32), data);
+		mesh.IndexCount = count;
+	}
+
+	void Renderer::SetMeshAttribute(Handle mesh_handle, MeshAttribute::Enum attribute, const float* data, SizeType count) {
+		VORTEX_ASSERT(m_Datas.Contains(mesh_handle))
+		VORTEX_ASSERT(m_Datas.Is<Mesh>(mesh_handle))
+		VORTEX_ASSERT(attribute < MeshAttribute::Count)
+		auto& mesh = m_Datas.Get<Mesh>(mesh_handle);
+
+		if (count > mesh.VertexCapacity) {
+			count = mesh.VertexCapacity;
+		}
+
+		auto attribute_handle = mesh.Buffers[attribute];
+		auto attribute_elem_type = MeshAttribute::ElementType[attribute];
+		auto attribute_size = ElementType::Size[attribute_elem_type];
+
+		VORTEX_ASSERT_MSG(m_RenderBackend->Contains(attribute_handle), "Mesh does not have %s attribute.", MeshAttribute::ToString[attribute])
+
+		m_RenderBackend->UpdateBuffer(attribute_handle, 0, count * attribute_size, data);
+	}
+	void Renderer::DestroyMesh(Handle mesh_handle) {
+		VORTEX_ASSERT(m_Datas.Is<Mesh>(mesh_handle))
+		VORTEX_ASSERT(m_Datas.Contains(mesh_handle))
+		const auto& mesh = m_Datas.Get<Mesh>(mesh_handle);
+
+		for (auto buffer_handle : mesh.Buffers) {
+			if (m_RenderBackend->Contains(buffer_handle)) {
+				m_RenderBackend->DestroyBuffer(buffer_handle);
+			}
+		}
+		m_RenderBackend->DestroyBuffer(mesh.IndexBuffer);
+		m_RenderBackend->DestroyVertexArray(mesh.VertexArray);
+		m_Datas.Destroy(mesh_handle);
+	}
+
+	Handle Renderer::CreateMaterial(Handle shader_handle, Vortex::Graphics::Blending::Enum blending, OnMaterialBindFn on_material_bind) {
+		auto handle = m_Datas.Insert<Material>(
+			{
+				shader_handle
+				, on_material_bind
+				, blending
+			}
+		);
+
+		return handle;
+	}
+	void Renderer::DestroyMaterial(Handle material_handle) {
+		VORTEX_ASSERT(m_Datas.Is<Material>(material_handle))
+		const auto& material = m_Datas.Get<Material>(material_handle);
+		m_Datas.Destroy(material_handle);
+	}
+
+	Handle Renderer::CreateView(
+		const RectangleInt& viewport,
+		const Matrix4& projection_matrix,
+		const Matrix4& view_matrix
+	) {
+
+		Color color{0.2f, 0.3f, 0.3f, 1.0f};
+		View view{
+			viewport
+			, color
+			, projection_matrix
+			, view_matrix
+			, RendererDataMap::NullHandle
+		};
+
+		auto handle = m_Datas.Insert<View>(view);
+		return handle;
+	}
+	Handle Renderer::CreateBufferedView(
+		const RectangleInt& viewport,
+		const Matrix4& projection_matrix,
+		const Matrix4& view_matrix
+	) {
+		UInt16 attachment_size[]{
+			static_cast<UInt16>(viewport.Width())
+			, static_cast<UInt16>(viewport.Height())
+		};
+
+		FrameBufferAttachment::Enum attachments[]{
+			FrameBufferAttachment::Color0
+			, FrameBufferAttachment::DepthStencil
+		};
+		auto attachments_size = Vortex::ArrayCount(attachments);
+
+		Handle frame_buffer = m_RenderBackend->CreateFrameBuffer(attachment_size, attachments, attachments_size);
+
+		Color color{0.2f, 0.3f, 0.3f, 1.0f};
+		View view{
+			viewport
+			, color
+			, projection_matrix
+			, view_matrix
+			, frame_buffer
+		};
+
+		auto handle = m_Datas.Insert<View>(view);
+		return handle;
+	}
+	void Renderer::DestroyView(Handle view_handle) {
+		VORTEX_ASSERT(m_Datas.Is<View>(view_handle))
+		const auto& view = m_Datas.Get<View>(view_handle);
+
+		if (m_RenderBackend->Contains(view.FrameBuffer)) {
+			m_RenderBackend->DestroyFrameBuffer(view.FrameBuffer);
+		}
+		m_Datas.Destroy(view_handle);
+	}
+
+	void Renderer::OnEvent(const Event& event) {
+		if (event.Type == EventType::WindowResize) {
+			auto& view = m_Datas.Get<View>(DefaultView);
+
+			view.ProjectionMatrix.SetOrthographic(
+				0.0f,
+				static_cast<float>(event.Size[0]),
+				static_cast<float>(event.Size[1]),
+				0.0f,
+				-10.0f,
+				10.0f
+			);
+			view.Viewport.Width() = event.Size[0];
+			view.Viewport.Height() = event.Size[1];
+		}
+	}
+
+	void Renderer::ProcessComputeShaderCommands() {
+		if (!m_ComputeCommands.empty()) {
+#ifdef VORTEX_DEBUG
+			d_CheckComputeCommands();
+#endif
+
+			m_RenderBackend->BeginTimerQuery(m_ComputeShaderTimerQuery);
+			for (const auto& command :  m_ComputeCommands) {
+				auto& compute_shader = m_Datas.Get<ComputeShader>(command.ComputeShader);
+
+				m_RenderBackend->BindShader(compute_shader.Shader);
+				ComputeShaderBinder binder{m_RenderBackend, compute_shader};
+				compute_shader.OnBind(binder);
+
+				m_RenderBackend->Dispatch(command.GroupCount.Data());
+			}
+
+			UInt32 queried_time;
+			if (m_RenderBackend->EndTimerQuery(m_ComputeShaderTimerQuery, queried_time)) {
+				m_ComputeShaderTime = static_cast<float>(queried_time) / 1000000.0f;
+			}
+			m_ComputeCommands.clear();
+		}
+	}
+
+	void Renderer::SortDrawCommands() {
+		for (auto& command :  m_DrawCommands) {
+			//calculate depths
+			if (DrawCall::GetViewLayer(command.DrawCall) != ViewLayer::PostProcess) {
+				Handle view_handle = DrawCall::GetViewHandle(command.DrawCall);
+				Vector3 mesh_position;
+				Vector3 view_position;
+
+				m_Datas.Get<View>(view_handle).ViewMatrix.ExtractTranslation(view_position);
+				command.TransformMatrix.ExtractTranslation(mesh_position);
+
+				float distance{mesh_position.Distance(view_position)};
+
+				DrawCall::SetDepth(command.DrawCall, static_cast<UInt32>(distance));
+			}
+		}
+
+		std::sort(m_DrawCommands.begin(), m_DrawCommands.end(),
+				  [](const DrawCommand& lhs, const DrawCommand& rhs) {
+					  return lhs.DrawCall < rhs.DrawCall;
+				  }
+		);
+	}
+	void Renderer::ProcessDrawCommands() {
+		if (!m_DrawCommands.empty()) {
+#ifdef VORTEX_DEBUG
+			d_CheckDrawCommands();
+#endif
+			SortDrawCommands();
+
+			Handle active_view_handle{RendererDataMap::NullHandle};
+			Blending::Enum active_blending{Blending::Null};
+			ViewLayer::Enum active_view_layer{ViewLayer::Null};
+
+			Handle active_material_handle{RendererDataMap::NullHandle};
+
+			Matrix4 inverted_view_matrix;
+			Vector2 view_resolution;
+			m_RenderBackend->BeginTimerQuery(m_RenderTimerQuery);
+
+			for (const auto& command :  m_DrawCommands) {
+				auto command_view_handle = DrawCall::GetViewHandle(command.DrawCall);
+				const auto& command_view = m_Datas.Get<View>(command_view_handle);
+
+				//set view
+				if (command_view_handle != active_view_handle) {
+					active_view_handle = command_view_handle;
+
+					if (m_Datas.Contains(command_view.FrameBuffer)) {
+						m_RenderBackend->BindFrameBuffer(command_view.FrameBuffer);
+					} else {
+						m_RenderBackend->BindBackBuffer();
+					}
+
+					m_RenderBackend->ClearColor(command_view.ClearColor);
+					m_RenderBackend->SetViewport(command_view.Viewport);
+					m_RenderBackend->SetDepthTest(DepthTesting::Less);
+
+					inverted_view_matrix = command_view.ViewMatrix;
+					inverted_view_matrix.Invert();
+
+					view_resolution.Set(
+						static_cast<float>(command_view.Viewport.x()),
+						static_cast<float>(command_view.Viewport.y())
+					);
+				}
+
+				auto command_view_layer = DrawCall::GetViewLayer(command.DrawCall);
+
+				if (command_view_layer != ViewLayer::PostProcess) {
+					Blending::Enum command_blending;
+					Handle command_material_handle;
+					UInt32 command_depth;
+					Handle command_mesh_handle = command.MeshHandle;
+
+					DrawCall::DecodeDrawCall(command.DrawCall, command_blending, command_material_handle, command_depth);
+
+					const auto& command_material = m_Datas.Get<Material>(command_material_handle);
+					const auto& command_transform = command.TransformMatrix;
+
+					if (command_blending != active_blending) {
+						active_blending = command_blending;
+						m_RenderBackend->SetBlending(command_blending);
+					}
+
+					//clear depth when changing layers
+					if (command_view_layer != active_view_layer) {
+						m_RenderBackend->ClearDepth(1.0f);
+					}
+
+					//bind material
+					if (command_material_handle != active_material_handle || command_view_layer != active_view_layer) {
+						active_material_handle = command_material_handle;
+						active_view_layer = command_view_layer;
+
+						m_RenderBackend->BindShader(command_material.Shader);
+						if (command_material.OnBind != nullptr) {
+							MaterialBinder material_binder{m_RenderBackend, command_material};
+							command_material.OnBind(material_binder);
+						}
+
+						if (command_view_layer == ViewLayer::World) {
+							m_RenderBackend->SetUniform(
+								command_material.Shader,
+								ShaderConstants::ToHashedString[ShaderConstants::Matrix4_View],
+								inverted_view_matrix.Data(),
+								1
+							);
+						} else if (command_view_layer == ViewLayer::HUD) {
+							Matrix4 identity;
+
+							m_RenderBackend->SetUniform(
+								command_material.Shader,
+								ShaderConstants::ToHashedString[ShaderConstants::Matrix4_View],
+								identity.Data(),
+								1
+							);
+						}
+
+						const auto& projection_matrix = command_view.ProjectionMatrix;
+						m_RenderBackend->SetUniform(
+							command_material.Shader,
+							ShaderConstants::ToHashedString[ShaderConstants::Matrix4_Projection],
+							projection_matrix.Data(),
+							1
+						);
+
+						m_RenderBackend->SetUniform(
+							command_material.Shader,
+							ShaderConstants::ToHashedString[ShaderConstants::Float2_Resolution],
+							view_resolution.Data(),
+							1
+						);
+					}
+
+					m_RenderBackend->SetUniform(
+						command_material.Shader,
+						ShaderConstants::ToHashedString[ShaderConstants::Matrix4_Transform],
+						command_transform.Data(),
+						1
+					);
+
+					const auto& command_mesh = m_Datas.Get<Mesh>(command_mesh_handle);
+					m_RenderBackend->Draw(command_mesh.VertexArray, command_mesh.IndexCount);
+				} else {
+
+					// Apply Post Processing to view
+					Handle command_postprocess_handle{RendererDataMap::NullHandle};
+					DrawCall::DecodePostProcessCall(command.DrawCall, command_postprocess_handle);
+
+					const auto& command_postprocess = m_Datas.Get<PostProcess>(command_postprocess_handle);
+					m_RenderBackend->BindShader(command_postprocess.Shader);
+
+					PostProcessBinder postprocess_binder{m_RenderBackend, command_postprocess};
+					command_postprocess.OnBind(postprocess_binder);
+
+				}
+			}
+			UInt32 queried_time;
+			if (m_RenderBackend->EndTimerQuery(m_RenderTimerQuery, queried_time)) {
+				m_RenderTime = static_cast<float>(queried_time) / 1000000.0f;
+			}
+			m_RenderBackend->BindBackBuffer();
+			m_DrawCommands.clear();
+		}
+	}
+	void Renderer::GenerateDefaultView(const Int32* resolution) {
+		Matrix4 identity;
+		Matrix4 projection;
+		projection.SetOrthographic(
+			0.0f,
+			static_cast<float>(resolution[0]),
+			static_cast<float>(resolution[1]),
+			0.0f,
+			-10.0f,
+			10.0f
+		);
+
+		Int32 viewport[]{0, 0, resolution[0], resolution[1]};
+
+		Color color{0.2f, 0.3f, 0.3f, 1.0f};
+		DefaultView = m_Datas.Insert<View>(
+			{
+				viewport
+				, color
+				, projection
+				, identity
+				, RendererDataMap::NullHandle
+			}
+		);
+	}
+
+#ifdef VORTEX_DEBUG
+	void Renderer::d_CheckDrawCommands() {
+		for (auto& command :  m_DrawCommands) {
+
+			auto view_handle = DrawCall::GetViewHandle(command.DrawCall);
+			VORTEX_ASSERT(view_handle == command.d_ViewHandle)
+			VORTEX_ASSERT(m_Datas.Contains(view_handle))
+
+			auto view_layer = DrawCall::GetViewLayer(command.DrawCall);
+			VORTEX_ASSERT(view_layer == command.d_ViewLayer)
+
+			if (view_layer == ViewLayer::PostProcess) {
+				Handle postprocess_handle;
+
+				DrawCall::DecodePostProcessCall(command.DrawCall, postprocess_handle);
+				VORTEX_ASSERT(m_Datas.Contains(postprocess_handle))
+
+			} else {
+				Blending::Enum blending;
+				Handle material_handle;
+				UInt32 depth;
+
+				DrawCall::DecodeDrawCall(
+					command.DrawCall,
+					blending,
+					material_handle,
+					depth
+				);
+
+				VORTEX_ASSERT(blending == command.d_Blending)
+				VORTEX_ASSERT(material_handle == command.d_MaterialHandle)
+				VORTEX_ASSERT(depth == command.d_Depth)
+
+				VORTEX_ASSERT(m_Datas.Contains(material_handle))
+				VORTEX_ASSERT(m_Datas.Contains(command.MeshHandle))
+			}
+		}
+	}
+	void Renderer::d_CheckComputeCommands() {
+		for (auto& command :  m_ComputeCommands) {
+			VORTEX_ASSERT(m_Datas.Contains(command.ComputeShader))
+		}
+	}
+#endif
 }
