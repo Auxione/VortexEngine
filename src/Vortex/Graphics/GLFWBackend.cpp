@@ -111,6 +111,9 @@ namespace Vortex::Graphics {
 			return nullptr;
 		}
 		glfwMakeContextCurrent(window);
+		if (resolution[2] == 0) {
+			glfwSwapInterval(0);
+		}
 
 		VORTEX_LOG_INFO("[GLFW] Window \"%s\" created. Resolution %ix%i %iHz.", title, resolution[0], resolution[1], resolution[2]);
 		return window;
