@@ -568,6 +568,7 @@ namespace Vortex {
 			, Color{0.0f, 1.0f, 0.0f, 1.0f}        // Green
 			, Color{1.0f, 1.0f, 0.0f, 1.0f}        // Yellow
 			, Color{1.0f, 0.0f, 0.0f, 1.0f}        // Red
+			, Color{1.0f, 0.5f, 0.0f, 1.0f}        // Orange
 			, Color{1.0f, 0.0f, 1.0f, 1.0f}        // Magenta
 
 			, Color{
