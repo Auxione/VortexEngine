@@ -1,27 +1,25 @@
 #pragma once
 #include "Vortex/Memory/Memory.h"
 
-#include "Vortex/Graphics/RenderBackend.h"
-#include "Vortex/Graphics/WindowBackend.h"
 #include "Vortex/Graphics/Renderer.h"
 
 namespace Vortex {
-	namespace GraphicsBackendType {
+	namespace GraphicsType {
 		enum Enum {
 			None = 0,
 			OpenGL45,
+			Vulkan,
 
 			Count
 		};
 		constexpr static const char* ToString[]{
 			"None"
 			, "OpenGL45"
+			, "Vulkan"
 		};
 	}
 
-	void InitGraphicsBackend(GraphicsBackendType::Enum graphics, const Int32* resolution, const char* title);
-	Graphics::WindowBackend* GetWindowBackend();
-	Graphics::RenderBackend* GetRenderBackend();
+	void InitGraphics(GraphicsType::Enum graphics);
 	Graphics::Renderer* GetRenderer();
-	void ShutdownGraphicsBackend();
+	void ShutdownGraphics();
 }

@@ -236,8 +236,7 @@ namespace Vortex::Graphics {
 
 			Count,
 
-			Disabled = Never,
-			Null = Count
+			Disabled = Never
 		};
 	}
 
@@ -249,8 +248,7 @@ namespace Vortex::Graphics {
 
 			Count,
 
-			Disabled = Opaque,
-			Null = Count
+			Disabled = Opaque
 		};
 		constexpr static const char* ToString[]{
 			"Opaque"
@@ -265,6 +263,10 @@ namespace Vortex::Graphics {
 			Color1,
 			Color2,
 			Color3,
+			Color4,
+			Color5,
+			Color6,
+			Color7,
 
 			ColorAttachmentCount,
 
@@ -280,6 +282,10 @@ namespace Vortex::Graphics {
 			, PixelFormat::RGBA_F32        //Color1
 			, PixelFormat::RGBA_F32        //Color2
 			, PixelFormat::RGBA_F32        //Color3
+			, PixelFormat::RGBA_F32        //Color4
+			, PixelFormat::RGBA_F32        //Color5
+			, PixelFormat::RGBA_F32        //Color6
+			, PixelFormat::RGBA_F32        //Color7
 
 			, PixelFormat::Count        //ColorAttachmentCount
 
@@ -294,6 +300,10 @@ namespace Vortex::Graphics {
 			, "Color1"
 			, "Color2"
 			, "Color3"
+			, "Color4"
+			, "Color5"
+			, "Color6"
+			, "Color7"
 
 			, "ColorAttachmentCount"
 
@@ -521,8 +531,7 @@ namespace Vortex::Graphics {
 			HUD,
 			PostProcess,
 
-			Count,
-			Null = Count
+			Count
 		};
 		constexpr const char* ToString[]{
 			"World"
