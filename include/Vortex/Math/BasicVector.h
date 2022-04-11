@@ -148,7 +148,6 @@ namespace Vortex {
 			return output;
 		}
 		constexpr T Distance(const BasicVector<Count, T>& rhs) {
-			T temp[Count];
 			T magnitude{0};
 
 			for (int i = 0; i < Count; ++i) {
