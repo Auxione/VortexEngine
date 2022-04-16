@@ -40,10 +40,6 @@ set(VORTEX_ENGINE_SOURCES_OGL45
         src/Vortex/Platform/OpenGL45/OpenGL45Renderer.cpp
         )
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(VortexEngine PUBLIC VORTEX_DEBUG) # VORTEX_DEBUG macro
-endif ()
-
 if (CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     #Build as executable
     add_executable(
@@ -74,6 +70,10 @@ else ()
             PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
     message(STATUS "[Vortex] Building as static library.")
+endif ()
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(VortexEngine PUBLIC VORTEX_DEBUG) # VORTEX_DEBUG macro
 endif ()
 
 target_precompile_headers(VortexEngine
