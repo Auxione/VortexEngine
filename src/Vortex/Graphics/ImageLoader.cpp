@@ -1,8 +1,9 @@
 #include "Vortex/Graphics/ImageLoader.h"
+#include "Vortex/Common/Console.h"
 
 #include <stb/stb_image.h>
 
-namespace Vortex {
+namespace Vortex::Graphics {
 	namespace STB {
 		//       1           grey
 		//       2           grey, alpha
@@ -34,12 +35,12 @@ namespace Vortex {
 			);
 
 			stbi_image_free(loaded_img_data);
-			VORTEX_LOG_INFO("[ImageLoader] Loaded from: %s.", file_name);
-			VORTEX_LOG_DEBUG("[ImageLoader] Size: %zu Bytes, Resolution: %zux%zu, Channels: %s.", w * h * c * sizeof(UByte), data.Size[0], data.Size[1], ImageChannels::ToString[data.Channels])
+			Console::WriteInfo("[ImageLoader] Loaded from: %s.", file_name);
+			Console::WriteDebug("[ImageLoader] Size: %zu Bytes, Resolution: %zux%zu, Channels: %s.", w * h * c * sizeof(UByte), data.Size[0], data.Size[1], ImageChannels::ToString[data.Channels]);
 			return true;
 		}
 
-		VORTEX_LOG_ERROR("[ImageLoader] Failed to load: %s.", file_name);
+		Console::WriteError("[ImageLoader] Failed to load: %s.", file_name);
 		return false;
 	}
 
@@ -61,12 +62,12 @@ namespace Vortex {
 			);
 
 			stbi_image_free(loaded_img_data);
-			VORTEX_LOG_INFO("[ImageLoader] Loaded from: %s.", file_name);
-			VORTEX_LOG_DEBUG("[ImageLoader] Size: %zu Bytes, Resolution: %zux%zu, Channels: %s.", w * h * c * sizeof(float), data.Size[0], data.Size[1], ImageChannels::ToString[data.Channels])
+			Console::WriteInfo("[ImageLoader] Loaded from: %s.", file_name);
+			Console::WriteDebug("[ImageLoader] Size: %zu Bytes, Resolution: %zux%zu, Channels: %s.", w * h * c * sizeof(float), data.Size[0], data.Size[1], ImageChannels::ToString[data.Channels]);
 			return true;
 		}
 
-		VORTEX_LOG_ERROR("[ImageLoader] Failed to load: %s.", file_name);
+		Console::WriteError("[ImageLoader] Failed to load: %s.", file_name);
 		return false;
 	}
 }

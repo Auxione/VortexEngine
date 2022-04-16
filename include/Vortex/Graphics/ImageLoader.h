@@ -4,7 +4,7 @@
 
 #include "Vortex/Memory/Memory.h"
 
-namespace Vortex {
+namespace Vortex::Graphics {
 	namespace ImageChannels {
 		enum Enum {
 			Single = 0,
