@@ -6,6 +6,9 @@ add_subdirectory(dependencies)
 
 project(VortexEngine)
 
+set(ENV{VULKAN_SDK} "C:\\VulkanSDK\\1.3.204.1")
+find_package(Vulkan REQUIRED)
+
 #sources
 set(VORTEX_ENGINE_SOURCES
         #audio
@@ -13,6 +16,8 @@ set(VORTEX_ENGINE_SOURCES
         src/Vortex/Audio/OpenALBackend.cpp
 
         #common
+        src/Vortex/Common/Console.cpp
+        src/Vortex/Common/DynamicLibrary.cpp
         src/Vortex/Common/ThreadPool.cpp
 
         #core
@@ -23,100 +28,52 @@ set(VORTEX_ENGINE_SOURCES
         src/Vortex/Debug/Profiler.cpp
 
         #graphics
-        src/Vortex/Graphics/GLFWBackend.cpp
         src/Vortex/Graphics/GraphicsAPI.cpp
         src/Vortex/Graphics/ImageLoader.cpp
-        src/Vortex/Graphics/OpenGL45Backend.cpp
-        src/Vortex/Graphics/Renderer.cpp
-
-        #math
-        src/Vortex/Math/Quaternion.cpp
-        src/Vortex/Math/Random.cpp
-        src/Vortex/Math/VortexMath.cpp
+        src/Vortex/Graphics/LineRenderer.cpp
 
         #memory
-        src/Vortex/Memory/HeapAllocator.cpp
-
         )
 
-#public headers
-set(VORTEX_ENGINE_PHEADERS
-        #audio
-        include/Vortex/Audio/AudioAPI.h
-        include/Vortex/Audio/AudioBackend.h
-
-        #common
-        include/Vortex/Common/FNV1Hasher.h
-        include/Vortex/Common/Handle.h
-        include/Vortex/Common/HashedString.h
-        include/Vortex/Common/Logger.h
-        include/Vortex/Common/Signal.h
-        include/Vortex/Common/Singleton.h
-        include/Vortex/Common/ThreadPool.h
-        include/Vortex/Common/Timer.h
-
-        #containers
-        include/Vortex/Containers/List.h
-        include/Vortex/Containers/Queue.h
-        include/Vortex/Containers/RawBuffer.h
-        include/Vortex/Containers/Vector.h
-
-        #core
-        include/Vortex/Core/Application.h
-        include/Vortex/Core/Event.h
-        include/Vortex/Core/Input.h
-        include/Vortex/Core/Keycode.h
-
-        #debug
-        include/Vortex/Debug/Assert.h
-        include/Vortex/Debug/Profiler.h
-
-        #graphics
-        include/Vortex/Graphics/GraphicsAPI.h
-        include/Vortex/Graphics/ImageLoader.h
-        include/Vortex/Graphics/RenderBackend.h
-        include/Vortex/Graphics/Renderer.h
-        include/Vortex/Graphics/WindowBackend.h
-
-        #math
-        include/Vortex/Math/BasicAngle.h
-        include/Vortex/Math/BasicCircle.h
-        include/Vortex/Math/BasicGUID.h
-        include/Vortex/Math/BasicLineSegment2.h
-        include/Vortex/Math/BasicMatrix.h
-        include/Vortex/Math/BasicRectangle.h
-        include/Vortex/Math/BasicTriangle.h
-        include/Vortex/Math/BasicVector.h
-        include/Vortex/Math/MathToString.h
-        include/Vortex/Math/Random.h
-        include/Vortex/Math/VortexMath.h
-        include/Vortex/Math/VortexMathConstants.h
-
-        #memory
-        include/Vortex/Memory/Allocator.h
-        include/Vortex/Memory/HeapAllocator.h
-        include/Vortex/Memory/Memory.h
-        include/Vortex/Memory/SmartPointers.h
-
+#Platform: OpenGL45 sources
+set(VORTEX_ENGINE_SOURCES_OGL45
+        src/Vortex/Platform/OpenGL45/OpenGL45Renderer.cpp
         )
-
-#Build as static library
-add_library(
-        VortexEngine
-        STATIC
-        ${VORTEX_ENGINE_SOURCES}
-)
-set_target_properties(VortexEngine PROPERTIES PUBLIC_HEADER
-        ${VORTEX_ENGINE_PHEADERS}
-        )
-
-install(TARGETS VortexEngine
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(VortexEngine PUBLIC VORTEX_DEBUG)
+    target_compile_definitions(VortexEngine PUBLIC VORTEX_DEBUG) # VORTEX_DEBUG macro
+endif ()
+
+if (CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    #Build as executable
+    add_executable(
+            VortexEngine
+            src/Vortex/Core/EntryPoint.cpp
+            ${VORTEX_ENGINE_SOURCES}
+            ${VORTEX_ENGINE_SOURCES_OGL45}
+    )
+    set_target_properties(
+            VortexEngine
+            PROPERTIES
+            ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    )
+    message(STATUS "[Vortex] Building as executable.")
+else ()
+    #Build as static library
+    add_library(
+            VortexEngine
+            STATIC
+            ${VORTEX_ENGINE_SOURCES}
+            ${VORTEX_ENGINE_SOURCES_OGL45}
+    )
+
+    install(TARGETS VortexEngine
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+    message(STATUS "[Vortex] Building as static library.")
 endif ()
 
 target_precompile_headers(VortexEngine
@@ -127,8 +84,8 @@ target_include_directories(VortexEngine
         #main
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/
 
-        #backends
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/
+        #backends & platforms
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Vortex/Platform/
 
         #dependencies
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/glfw/include/
@@ -141,6 +98,7 @@ target_link_Libraries(VortexEngine
         PRIVATE glad33
         PRIVATE stb
         PRIVATE OpenAL
+        PRIVATE Vulkan::Vulkan
         )
 
 #auto-ignore build directory
