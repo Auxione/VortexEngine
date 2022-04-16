@@ -170,6 +170,13 @@ namespace Vortex::Graphics {
 			, "Compute"
 		};
 	}
+	namespace ShaderTags {
+		enum Enum {
+			Undefined = 0,
+			Lit = 1 << 1,
+			Instanced = 1 << 2
+		};
+	}
 
 	namespace BufferUsage {
 		enum Enum {
@@ -200,27 +207,6 @@ namespace Vortex::Graphics {
 			, "StreamDraw"
 			, "StreamRead"
 			, "StreamCopy"
-		};
-	}
-
-	namespace RenderStates {
-		enum Enum {
-			FaceCulling,
-			Multisampling,
-			ScissorTest,
-			StencilTest,
-
-			Count
-		};
-	}
-
-	namespace FaceCulling {
-		enum Enum {
-			Back,
-			Front,
-			FrontAndBack,
-
-			Count
 		};
 	}
 
