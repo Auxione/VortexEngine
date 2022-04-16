@@ -1,5 +1,5 @@
 #include "Vortex/Common/ThreadPool.h"
-#include "Vortex/Common/Logger.h"
+#include "Vortex/Common/Console.h"
 
 namespace Vortex {
 	ThreadPool::ThreadPool(SizeType thread_count)
@@ -22,7 +22,7 @@ namespace Vortex {
 				try {
 					thread_job->Execute();
 				} catch (const std::exception& e) {
-					Vortex::Logger::Log(Logger::LogType::Error, "Exception raised when executing job.\n%s\n", e.what());
+					Console::WriteError("Exception raised when executing job.\n%s\n", e.what());
 				}
 				delete thread_job;
 				--m_ActiveJobCount;

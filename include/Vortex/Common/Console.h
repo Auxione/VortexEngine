@@ -46,7 +46,7 @@ namespace Vortex {
 		}
 
 	public:
-		explicit Console(std::filesystem::path file_path = "log.txt", SizeType max_value = 20);
+		explicit Console(std::filesystem::path file_path = "log.txt", SizeType max_value = 100);
 		~Console();
 
 	public:
@@ -58,36 +58,79 @@ namespace Vortex {
 			std::unique_lock write_lock{m_Mutex};
 			m_LogFileBufferEntryCount = max_value;
 		}
+		inline void SetDebugOutput(bool active) {
+			std::unique_lock write_lock{m_Mutex};
+			m_DebugOutput = active;
+		}
 		void Flush();
 
-	public:
-		void Write(EntryType::Enum type, const char* log);
+	protected:
+		void Write_(EntryType::Enum type, const char* log);
+		void Append_(const char* log);
 
+	public:
 		template<typename ...Args>
-		inline void Write(EntryType::Enum type, const char* format, Args ... args) {
+		inline void WriteFormat(EntryType::Enum type, const char* format, Args ... args) {
+			if (!m_DebugOutput && type == EntryType::Debug) { return; }
+
 			char buffer[512];
 			sprintf_s(buffer, 512, format, args...);
-			Write(type, buffer);
+			Write_(type, buffer);
+		}
+
+		template<typename ...Args>
+		inline void AppendFormat(EntryType::Enum type, const char* format, Args ... args) {
+			if (!m_DebugOutput && type == EntryType::Debug) { return; }
+
+			char buffer[512];
+			sprintf_s(buffer, 512, format, args...);
+			Append_(buffer);
 		}
 
 		ThreadSafeReader<ContainerType> GetEntries() const { return {m_Mutex, &m_Entries}; }
 
 	public:
 		template<typename ...Args>
+		inline static void Write(EntryType::Enum type, const char* format, Args ... args) {
+			Get().WriteFormat<Args...>(type, format, args...);
+		}
+		template<typename ...Args>
 		inline static void WriteDebug(const char* format, Args ... args) {
-			Get().Write<Args...>(EntryType::Debug, format, args...);
+			Write<Args...>(EntryType::Debug, format, args...);
 		}
 		template<typename ...Args>
 		inline static void WriteInfo(const char* format, Args ... args) {
-			Get().Write<Args...>(EntryType::Info, format, args...);
+			Write<Args...>(EntryType::Info, format, args...);
 		}
 		template<typename ...Args>
 		inline static void WriteWarning(const char* format, Args ... args) {
-			Get().Write<Args...>(EntryType::Warning, format, args...);
+			Write<Args...>(EntryType::Warning, format, args...);
 		}
 		template<typename ...Args>
 		inline static void WriteError(const char* format, Args ... args) {
-			Get().Write<Args...>(EntryType::Error, format, args...);
+			Write<Args...>(EntryType::Error, format, args...);
+		}
+
+	public:
+		template<typename ...Args>
+		inline static void Append(EntryType::Enum type, const char* format, Args ... args) {
+			Get().AppendFormat<Args...>(type, format, args...);
+		}
+		template<typename ...Args>
+		inline static void AppendDebug(const char* format, Args ... args) {
+			Append<Args...>(EntryType::Debug, format, args...);
+		}
+		template<typename ...Args>
+		inline static void AppendInfo(const char* format, Args ... args) {
+			Append<Args...>(EntryType::Info, format, args...);
+		}
+		template<typename ...Args>
+		inline static void AppendWarning(const char* format, Args ... args) {
+			Append<Args...>(EntryType::Warning, format, args...);
+		}
+		template<typename ...Args>
+		inline static void AppendError(const char* format, Args ... args) {
+			Append<Args...>(EntryType::Error, format, args...);
 		}
 
 	public:
@@ -97,6 +140,8 @@ namespace Vortex {
 		static Console* s_Instance;
 
 	protected:
+		bool m_DebugOutput;
+
 		std::filesystem::path m_LogFilePath;
 		SizeType m_LogFileBufferEntryCount;
 		ContainerType m_LogFileBuffer;

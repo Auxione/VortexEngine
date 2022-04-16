@@ -1,6 +1,6 @@
 #pragma once
 #include "Vortex/Memory/Memory.h"
-#include "Vortex/Common/Logger.h"
+#include "Vortex/Common/Console.h"
 #include "Vortex/Debug/Assert.h"
 
 #include <iostream>
@@ -14,7 +14,7 @@ namespace Vortex::Memory {
 #ifdef VORTEX_DEBUG
 		~HeapAllocator() {
 			for (auto allocations : d_AllocRegistry) {
-				VORTEX_LOG_ERROR("[HeapAllocator] Allocation %zu is leaked %zu bytes from memory address %p.", allocations.second, d_SizeRegistry[allocations.first], allocations.first);
+				Console::WriteError("[HeapAllocator] Allocation %zu is leaked %zu bytes from memory address %p.", allocations.second, d_SizeRegistry[allocations.first], allocations.first);
 			}
 		}
 #endif

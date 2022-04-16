@@ -14,12 +14,19 @@ namespace Vortex {
 		  m_Entries(),
 
 		  m_TotalEntryCount{0},
-		  m_Mutex() {
+		  m_Mutex(),
+
+		  m_DebugOutput{false} {
+
+#if VORTEX_DEBUG
+		m_DebugOutput = true;
+#endif
 
 		std::ofstream file{m_LogFilePath};
 		if (file.is_open()) {
 			file << "\nVortex Engine Console Log\n\n";
 		}
+		printf("Vortex Engine Console Log");
 	}
 	Console::~Console() {
 		Flush();
@@ -45,8 +52,8 @@ namespace Vortex {
 		}
 	}
 
-	void Console::Write(EntryType::Enum log_type, const char* log) {
-		printf("[%-7s] %s\n", EntryType::ToString[log_type], log);
+	void Console::Write_(EntryType::Enum log_type, const char* log) {
+		printf("\n[%-7s] %s", EntryType::ToString[log_type], log);
 
 		Console::Entry entry{log, log_type};
 
@@ -58,4 +65,10 @@ namespace Vortex {
 
 		if (size > m_LogFileBufferEntryCount) { Flush(); }
 	}
+	void Console::Append_(const char* log) {
+		printf("%s", log);
+		std::unique_lock write_lock{m_Mutex};
+		m_Entries.back().Log.append(log);
+	}
+
 }
