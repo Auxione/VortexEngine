@@ -22,13 +22,13 @@ namespace Vortex {
 		void OnEvent(const Event& event);
 
 	public: // cursor
-		Vector2 CursorSensivity;
-		Vector4 CursorLimits;
+		Math::Vector2 CursorSensivity;
+		Math::Vector4 CursorLimits;
 		CursorInputMode::Enum CursorInputMode;
 
-		[[nodiscard]] const Vector2& GetCursorPosition() const { return m_CursorPosition; };
-		[[nodiscard]] const Vector2& GetCursorDelta() const { return m_CursorDelta; };
-		[[nodiscard]] const Vector2& GetScrollDelta() const { return m_ScrollDelta; };
+		[[nodiscard]] const Math::Vector2& GetCursorPosition() const { return m_CursorPosition; };
+		[[nodiscard]] const Math::Vector2& GetCursorDelta() const { return m_CursorDelta; };
+		[[nodiscard]] const Math::Vector2& GetScrollDelta() const { return m_ScrollDelta; };
 
 	public: // mouse & keyboard
 		[[nodiscard]]  bool ButtonHeld(MouseButton::Enum mouse_button) const { return m_MouseButton[mouse_button] & StateDown; }
@@ -48,11 +48,11 @@ namespace Vortex {
 		constexpr static UInt8 StateDown{1 << 1};
 
 	protected:
-		Vector2 m_LastCursorPosition;
-		Vector2 m_CursorPosition;
-		Vector2 m_CursorDelta;
+		Math::Vector2 m_LastCursorPosition;
+		Math::Vector2 m_CursorPosition;
+		Math::Vector2 m_CursorDelta;
 
-		Vector2 m_ScrollDelta;
+		Math::Vector2 m_ScrollDelta;
 
 		UInt8 m_MouseButton[MouseButton::Count];
 		UInt8 m_Keyboard[KeyCode::Count];

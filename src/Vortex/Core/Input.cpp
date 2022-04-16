@@ -61,8 +61,8 @@ namespace Vortex {
 			case EventType::WindowResize:
 			case EventType::WindowPathDrop:
 			case EventType::WindowType:
-			case EventType::ApplicationFocusLost:
-			case EventType::ApplicationFocusGain:
+			case EventType::WindowFocusLost:
+			case EventType::WindowFocusGain:
 			case EventType::ApplicationClose:
 			case EventType::ApplicationType:
 			case EventType::KeyboardType:break;

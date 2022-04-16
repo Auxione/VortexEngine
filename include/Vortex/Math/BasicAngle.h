@@ -1,10 +1,9 @@
 #pragma once
+#include "Vortex/Math/VortexMathConstants.h"
 
-namespace Vortex {
+namespace Vortex::Math {
 	template<typename T>
 	struct BasicAngle {
-		constexpr operator T() { return m_Data; }
-
 	public:
 		constexpr BasicAngle(): m_Data{T{0}} {}
 		constexpr BasicAngle(const BasicAngle&) = default;
@@ -14,7 +13,7 @@ namespace Vortex {
 		explicit constexpr BasicAngle(T value): m_Data{value} {}
 
 	public:
-		constexpr static BasicAngle FromDegrees(T value) { return BasicAngle{static_cast<T>(Math::DegToRad) * value}; }
+		constexpr static BasicAngle FromDegrees(T value) { return BasicAngle{static_cast<T>(DegToRad<T>()) * value}; }
 		constexpr static BasicAngle FromRadians(T value) { return BasicAngle{value}; }
 
 	public:
@@ -55,10 +54,10 @@ namespace Vortex {
 		constexpr BasicAngle& operator=(BasicAngle&&) noexcept = default;
 
 	public:
-		constexpr T ToDegrees() const { return static_cast<T>(Math::RadToDeg) * m_Data; }
+		constexpr T ToDegrees() const { return static_cast<T>(RadToDeg<T>()) * m_Data; }
 		constexpr T ToRadians() const { return m_Data; }
 
-		constexpr void SetDegrees(T value) { m_Data = Math::DegToRad * value; }
+		constexpr void SetDegrees(T value) { m_Data = DegToRad<T>() * value; }
 		constexpr void SetRadians(T value) { m_Data = value; }
 
 	protected:
