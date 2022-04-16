@@ -1,4 +1,5 @@
 #pragma once
+#include <initializer_list>
 #include "Vortex/Graphics/GraphicsEnum.h"
 
 namespace Vortex::Graphics {
@@ -18,24 +19,20 @@ namespace Vortex::Graphics {
 		BufferLayout()
 			: m_Stride{0}, m_Elements{}, ElementPerInstance{0} {}
 
-		template<SizeType N>
-		BufferLayout(const ElementType::Enum (& types)[N])
-			: m_Stride{0}, m_Elements{N}, ElementPerInstance{0} {
+		BufferLayout(std::initializer_list<ElementType::Enum> element_types)
+			: m_Stride{0}, m_Elements(), ElementPerInstance{0} {
 
 			UInt16 offset = 0;
-			for (int i = 0; i < N; ++i) {
-				auto type = types[i];
-				BufferElement element{
-					type
-					, ElementType::Size[type]
-					, 0
-					, false
-				};
-
+			for (auto type : element_types) {
+				BufferElement element{};
+				element.Type = type;
+				element.Size = ElementType::Size[type];
 				element.Offset = offset;
+				element.Normalized = false;
+
 				offset += element.Size;
 				m_Stride += element.Size;
-				m_Elements[i] = element;
+				m_Elements.emplace_back(element);
 			}
 		}
 
