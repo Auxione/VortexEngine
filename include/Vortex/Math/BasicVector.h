@@ -278,9 +278,9 @@ std::ostream& operator<<(
 	const Vortex::Math::BasicVector<T, Rows>& vector
 ) {
 	stream << "[ ";
-	for (Vortex::SizeType i = 0; i < Rows; ++i) {
-		stream << vector[i] << " ";
+	for (Vortex::SizeType i = 0; i < Rows - 1; ++i) {
+		stream << vector[i] << " - ";
 	}
-	stream << "]\n";
+	stream << vector[Rows - 1] << "]";
 	return stream;
 }
