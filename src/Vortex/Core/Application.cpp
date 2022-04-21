@@ -1,12 +1,13 @@
 #include "Vortex/Core/Application.h"
-#include "Vortex/Common/Logger.h"
+#include "Vortex/Common/Console.h"
 
 namespace Vortex {
 	Application* Application::s_Instance{nullptr};
 
 	void Application::Run() {
 		VORTEX_ASSERT(s_Instance == nullptr)
-		VORTEX_LOG_INFO("Vortex Engine 0.3");
+		Console::Initialize();
+		Console::WriteInfo("Vortex Engine 0.3");
 
 		s_Instance = this;
 
@@ -34,5 +35,6 @@ namespace Vortex {
 
 		OnStop();
 		s_Instance = nullptr;
+		Console::Shutdown();
 	}
 }
