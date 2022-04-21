@@ -13,14 +13,14 @@ namespace Vortex {
 			KeyRepeat,
 			CharInput,
 
-			KeyboardType,
+			KeyboardEventCount,
 
 			MousePress,
 			MouseRelease,
 			MouseMove,
 			ScrollChange,
 
-			MouseType,
+			MouseEventCount,
 
 			WindowResize,
 			WindowPathDrop,
@@ -28,11 +28,11 @@ namespace Vortex {
 			WindowFocusGain,
 			WindowClose,
 
-			WindowType,
+			WindowEventCount,
 
 			ApplicationClose,
 
-			ApplicationType
+			Count
 		};
 		constexpr static const char* ToString[]{
 			"None"
@@ -41,14 +41,14 @@ namespace Vortex {
 			, "KeyRepeat"
 			, "CharInput"
 
-			, "KeyboardType"
+			, "KeyboardEventCount"
 
 			, "MousePress"
 			, "MouseRelease"
 			, "MouseMove"
 			, "ScrollChange"
 
-			, "MouseType"
+			, "MouseEventCount"
 
 			, "WindowResize"
 			, "WindowPathDrop"
@@ -56,28 +56,57 @@ namespace Vortex {
 			, "WindowFocusGain"
 			, "WindowClose"
 
-			, "WindowType"
+			, "WindowEventCount"
 
 			, "ApplicationClose"
 
-			, "ApplicationType"
+			, "Count"
 		};
 
-		constexpr static bool IsKeyboard(EventType::Enum type) { return type < KeyboardType; }
-		constexpr static bool IsMouse(EventType::Enum type) { return KeyboardType < type && type < MouseType; }
-		constexpr static bool IsInput(EventType::Enum type) { return type < MouseType; }
-		constexpr static bool IsWindow(EventType::Enum type) { return MouseType < type && type < WindowType; }
-		constexpr static bool IsApplication(EventType::Enum type) { return WindowType < type && type < ApplicationType; }
+		constexpr static bool IsKeyboard(EventType::Enum type) { return type < KeyboardEventCount; }
+		constexpr static bool IsMouse(EventType::Enum type) { return KeyboardEventCount < type && type < MouseEventCount; }
+		constexpr static bool IsInput(EventType::Enum type) { return type < MouseEventCount; }
+		constexpr static bool IsWindow(EventType::Enum type) { return MouseEventCount < type && type < WindowEventCount; }
+		constexpr static bool IsApplication(EventType::Enum type) { return WindowEventCount < type && type < Count; }
 	};
 
 	struct Event {
 		EventType::Enum Type;
 
 		union {
-			KeyCode::Enum Keycode;
-			UInt16 Character;
-			MouseButton::Enum Button;
-			Math::Vector2 Position;
+			struct {
+				UInt16 Handle;
+				KeyCode::Enum Keycode;
+			} KeyPress;
+			struct {
+				UInt16 Handle;
+				KeyCode::Enum Keycode;
+			} KeyRelease;
+			struct {
+				UInt16 Handle;
+				KeyCode::Enum Keycode;
+			} KeyRepeat;
+			struct {
+				UInt16 Handle;
+				UInt16 Character;
+			} CharInput;
+
+			struct {
+				UInt16 Handle;
+				MouseButton::Enum Button;
+			} MousePress;
+			struct {
+				UInt16 Handle;
+				MouseButton::Enum Button;
+			} MouseRelease;
+			struct {
+				UInt16 Handle;
+				Math::Vector2 Delta;
+			} MouseMove;
+			struct {
+				UInt16 Handle;
+				Math::Vector2 Delta;
+			} ScrollChange;
 
 			struct {
 				UInt16 Handle;
@@ -90,65 +119,73 @@ namespace Vortex {
 			} WindowPathDrop;
 			struct {
 				UInt16 Handle;
-			} WindowFocus;
+			} WindowFocusGain;
+			struct {
+				UInt16 Handle;
+			} WindowFocusLost;
 			struct {
 				UInt16 Handle;
 			} WindowClose;
 		};
 
-		inline static Event CreateKeyPress(KeyCode::Enum keycode) {
+		inline static Event CreateKeyPress(UInt16 Handle, KeyCode::Enum keycode) {
 			Event event{EventType::KeyPress};
-			event.Keycode = keycode;
+			event.KeyPress.Keycode = keycode;
+			event.KeyPress.Handle = Handle;
 			return event;
 		}
 
-		inline static Event CreateKeyRelease(KeyCode::Enum keycode) {
+		inline static Event CreateKeyRelease(UInt16 Handle, KeyCode::Enum keycode) {
 			Event event{EventType::KeyRelease};
-			event.Keycode = keycode;
+			event.KeyRelease.Keycode = keycode;
+			event.KeyRelease.Handle = Handle;
 			return event;
 		}
 
-		inline static Event CreateKeyRepeat(KeyCode::Enum keycode) {
+		inline static Event CreateKeyRepeat(UInt16 Handle, KeyCode::Enum keycode) {
 			Event event{EventType::KeyRepeat};
-			event.Keycode = keycode;
+			event.KeyRepeat.Keycode = keycode;
+			event.KeyRepeat.Handle = Handle;
 			return event;
 		}
 
-		inline static Event CreateCharInput(UInt16 character) {
+		inline static Event CreateCharInput(UInt16 Handle, UInt16 character) {
 			Event event{EventType::CharInput};
-			event.Character = character;
+			event.CharInput.Character = character;
+			event.CharInput.Handle = Handle;
 			return event;
 		}
 
-		inline static Event CreateMousePress(MouseButton::Enum button) {
+		inline static Event CreateMousePress(UInt16 Handle, MouseButton::Enum button) {
 			Event event{EventType::MousePress};
-			event.Button = button;
+			event.MousePress.Button = button;
+			event.MousePress.Handle = Handle;
 			return event;
 		}
 
-		inline static Event CreateMouseRelease(MouseButton::Enum button) {
+		inline static Event CreateMouseRelease(UInt16 Handle, MouseButton::Enum button) {
 			Event event{EventType::MouseRelease};
-			event.Button = button;
+			event.MouseRelease.Button = button;
+			event.MouseRelease.Handle = Handle;
 			return event;
 		}
-		inline static Event CreateMouseMove(float x, float y) {
+		inline static Event CreateMouseMove(UInt16 Handle, float x, float y) {
 			Event event{EventType::MouseMove};
-			event.Position[0] = x;
-			event.Position[1] = y;
+			event.MouseMove.Delta.Set(x, y);
+			event.MouseMove.Handle = Handle;
 			return event;
 		}
-		inline static Event CreateScrollChange(float x, float y) {
+		inline static Event CreateScrollChange(UInt16 Handle, float x, float y) {
 			Event event{EventType::ScrollChange};
-			event.Position[0] = x;
-			event.Position[1] = y;
+			event.ScrollChange.Delta.Set(x, y);
+			event.ScrollChange.Handle = Handle;
 			return event;
 		}
 
 		inline static Event CreateWindowResize(UInt16 Handle, Int32 width, Int32 height) {
 			Event event{EventType::WindowResize};
 			event.WindowResize.Handle = Handle;
-			event.WindowResize.Size[0] = width;
-			event.WindowResize.Size[1] = height;
+			event.WindowResize.Size.Set(width, height);
 			return event;
 		}
 		inline static Event CreateWindowPathDrop(UInt16 Handle, std::size_t count, const char** paths) {
@@ -165,12 +202,12 @@ namespace Vortex {
 		}
 		inline static Event CreateWindowFocusGain(UInt16 handle) {
 			Event event{EventType::WindowFocusGain};
-			event.WindowFocus.Handle = handle;
+			event.WindowFocusGain.Handle = handle;
 			return event;
 		}
 		inline static Event CreateWindowFocusLost(UInt16 handle) {
 			Event event{EventType::WindowFocusLost};
-			event.WindowFocus.Handle = handle;
+			event.WindowFocusLost.Handle = handle;
 			return event;
 		}
 
@@ -180,5 +217,4 @@ namespace Vortex {
 	};
 
 	using EventCallbackFn = void (*)(const Event&);
-	//using PushEventFn = void(Event);
 }

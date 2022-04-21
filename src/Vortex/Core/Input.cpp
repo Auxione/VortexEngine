@@ -57,55 +57,55 @@ namespace Vortex {
 	void Input::OnEvent(const Event& event) {
 		switch (event.Type) {
 			case EventType::None:
-			case EventType::MouseType:
+			case EventType::MouseEventCount:
 			case EventType::WindowResize:
 			case EventType::WindowPathDrop:
-			case EventType::WindowType:
+			case EventType::WindowEventCount:
 			case EventType::WindowFocusLost:
 			case EventType::WindowFocusGain:
 			case EventType::ApplicationClose:
-			case EventType::ApplicationType:
-			case EventType::KeyboardType:break;
+			case EventType::Count:
+			case EventType::KeyboardEventCount:break;
 
 			case EventType::KeyPress: {
-				m_Keyboard[event.Keycode] = StateDown | StateChanged;
+				m_Keyboard[event.KeyPress.Keycode] = StateDown | StateChanged;
 				break;
 			}
 			case EventType::KeyRelease: {
-				m_Keyboard[event.Keycode] = StateUp | StateChanged;
+				m_Keyboard[event.KeyRelease.Keycode] = StateUp | StateChanged;
 				break;
 			}
 			case EventType::KeyRepeat: {
-				m_Keyboard[event.Keycode] = StateDown | StateChanged;
+				m_Keyboard[event.KeyRepeat.Keycode] = StateDown | StateChanged;
 				break;
 			}
 			case EventType::CharInput: {
-				m_LastChar = event.Character;
+				m_LastChar = event.CharInput.Character;
 				break;
 			}
 			case EventType::MousePress: {
-				m_MouseButton[event.Button] = StateDown | StateChanged;
+				m_MouseButton[event.MousePress.Button] = StateDown | StateChanged;
 				break;
 			}
 			case EventType::MouseRelease: {
-				m_MouseButton[event.Button] = StateUp | StateChanged;
+				m_MouseButton[event.MouseRelease.Button] = StateUp | StateChanged;
 				break;
 			}
 			case EventType::MouseMove: {
-				m_CursorDelta[0] = event.Position[0] - m_LastCursorPosition[0];
-				m_CursorDelta[1] = event.Position[1] - m_LastCursorPosition[1];
-				m_LastCursorPosition[0] = event.Position[0];
-				m_LastCursorPosition[1] = event.Position[1];
+				m_CursorDelta[0] = event.MouseMove.Delta[0] - m_LastCursorPosition[0];
+				m_CursorDelta[1] = event.MouseMove.Delta[1] - m_LastCursorPosition[1];
+				m_LastCursorPosition[0] = event.MouseMove.Delta[0];
+				m_LastCursorPosition[1] = event.MouseMove.Delta[1];
 
 				if (CursorInputMode == CursorInputMode::OS) {
-					m_CursorPosition[0] = Math::Clamp(event.Position[0], CursorLimits[0], CursorLimits[2]);
-					m_CursorPosition[1] = Math::Clamp(event.Position[1], CursorLimits[1], CursorLimits[3]);
+					m_CursorPosition[0] = Math::Clamp(event.MouseMove.Delta[0], CursorLimits[0], CursorLimits[2]);
+					m_CursorPosition[1] = Math::Clamp(event.MouseMove.Delta[1], CursorLimits[1], CursorLimits[3]);
 				}
 				break;
 			}
 			case EventType::ScrollChange: {
-				m_ScrollDelta[0] = event.Position[0];
-				m_ScrollDelta[1] = event.Position[1];
+				m_ScrollDelta[0] = event.ScrollChange.Delta[0];
+				m_ScrollDelta[1] = event.ScrollChange.Delta[1];
 				break;
 			}
 		}
