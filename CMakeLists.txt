@@ -88,9 +88,11 @@ target_include_directories(VortexEngine
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Vortex/Platform/
 
         #dependencies
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/glfw/include/
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/glad33/include/
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/stb/include/
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/glfw/include/
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/glad33/include/
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/stb/include/
+
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/pugixml/src
         )
 
 target_link_Libraries(VortexEngine
@@ -99,6 +101,7 @@ target_link_Libraries(VortexEngine
         PRIVATE stb
         PRIVATE OpenAL
         PRIVATE Vulkan::Vulkan
+        PRIVATE pugixml
         )
 
 #auto-ignore build directory

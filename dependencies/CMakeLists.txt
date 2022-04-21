@@ -5,3 +5,5 @@ add_subdirectory(glfw)
 add_subdirectory(stb)
 
 add_subdirectory(openal-soft)
+
+add_subdirectory(pugixml)
