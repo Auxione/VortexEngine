@@ -500,16 +500,19 @@ namespace Vortex::Math {
 			SizeType Columns_ = Columns,
 			typename = EIF<(Rows_ >= 4 && Columns_ >= 4 && std::is_floating_point_v<T_>)>
 		>
-		inline void SetPerspective(const BasicAngle<T_>& angle, T_ aspect_ratio, T_ near, T_ far) {
-			auto cot = T_{1} / Tan<T_>(T_{0.5} * angle.ToRadians());
+		inline void SetPerspective(const BasicAngle<T_>& fovy, T_ aspect_ratio, T_ near, T_ far) {
+			// RHS
 			// |[00]  01   02   03  . |
 			// | 10  [11]  12   13  . |
 			// | 20   21  [22] [23] . |
 			// | 30   31  [32] [33] . |
 			// | .    .    .    .   . |
-			this->operator()(0, 0) = cot / aspect_ratio;
+
+			auto cot = T_{1} / (Tan<T_>(T_{0.5} * fovy.ToRadians()));
+
+			this->operator()(0, 0) = aspect_ratio * cot;
 			this->operator()(1, 1) = cot;
-			this->operator()(2, 2) = (near + far) / (near - far);
+			this->operator()(2, 2) = (far + near) / (near - far);
 
 			this->operator()(3, 2) = T_{-1};
 			this->operator()(2, 3) = (T_{2} * far * near) / (near - far);
@@ -522,23 +525,73 @@ namespace Vortex::Math {
 			typename = EIF<(Rows_ >= 4 && Columns_ >= 4 && std::is_floating_point_v<T_>)>
 		>
 		inline void SetOrthographic(T_ left, T_ right, T_ bottom, T_ top, T_ near, T_ far) {
-			auto dRL_inv = T_{1} / (right - left);
-			auto dTB_inv = T_{1} / (top - bottom);
-			auto dNF_inv = T_{1} / (near - far);
+			// RHS
 			// |[00]  01   02  [03] . |
 			// | 10  [11]  12  [13] . |
 			// | 20   21  [22] [23] . |
 			// | 30   31   32  [33] . |
 			// | .    .    .    .   . |
 
+			auto dRL_inv = T_{1} / (right - left);
+			auto dTB_inv = T_{1} / (top - bottom);
+			auto dFN_inv = T_{1} / (far - near);
+
 			this->operator()(0, 0) = T_{2} * dRL_inv;
 			this->operator()(1, 1) = T_{2} * dTB_inv;
-			this->operator()(2, 2) = T_{2} * dNF_inv;
+			this->operator()(2, 2) = T_{-2} * dFN_inv;
 
 			this->operator()(0, 3) = -(right + left) * dRL_inv;
 			this->operator()(1, 3) = -(top + bottom) * dTB_inv;
-			this->operator()(2, 3) = -(far + near) * dNF_inv;
+			this->operator()(2, 3) = -(far + near) * dFN_inv;
 			this->operator()(3, 3) = T_{1};
+		}
+		template<
+			typename T_ = UnderlyingType,
+			SizeType Rows_ = Rows,
+			SizeType Columns_ = Columns,
+			typename = EIF<(Rows_ >= 4 && Columns_ >= 4 && std::is_floating_point_v<T_>)>
+		>
+		inline void SetLookat(
+			const BasicVector<T_, 3>& eye,
+			const BasicVector<T_, 3>& center,
+			const BasicVector<T_, 3>& up) {
+			// RHS
+			// |[00] [01] [02] [03] . |
+			// |[10] [11] [12] [13] . |
+			// |[20] [21] [22] [23] . |
+			// |[30] [31] [32] [33] . |
+			// | .    .    .    .   . |
+
+			// Compute direction from position to lookAt
+			auto dir = eye - center;
+			dir.Normalize();
+
+			// left = up x direction cross product
+			BasicVector<T_, 3> left = BasicVector<T_, 3>::Cross(up, dir);
+			left.Normalize();
+
+			// up = direction x left
+			BasicVector<T_, 3> upn = BasicVector<T_, 3>::Cross(dir, left);
+
+			this->operator()(0, 0) = left.x;
+			this->operator()(1, 0) = upn.x;
+			this->operator()(2, 0) = dir.x;
+			this->operator()(3, 0) = 0.0f;
+
+			this->operator()(0, 1) = left.y;
+			this->operator()(1, 1) = upn.y;
+			this->operator()(2, 1) = dir.y;
+			this->operator()(3, 1) = 0.0f;
+
+			this->operator()(0, 2) = left.z;
+			this->operator()(1, 2) = upn.z;
+			this->operator()(2, 2) = dir.z;
+			this->operator()(3, 2) = 0.0f;
+
+			this->operator()(0, 3) = -(left.x * eye.x + left.y * eye.y + left.z * eye.z);
+			this->operator()(1, 3) = -(upn.x * eye.x + upn.y * eye.y + upn.z * eye.z);
+			this->operator()(2, 3) = -(dir.x * eye.x + dir.y * eye.y + dir.z * eye.z);
+			this->operator()(3, 3) = 1.0f;
 		}
 
 		float Determinant() const;
