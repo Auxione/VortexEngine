@@ -1,4 +1,5 @@
 #pragma once
+#include <limits>
 
 namespace Vortex::Graphics {
 	template<Vortex::SizeType Size_>
@@ -6,15 +7,15 @@ namespace Vortex::Graphics {
 		Byte Data[Size_];
 
 		template<typename T>
-		inline T& Layout() {
-			VORTEX_STATIC_ASSERT(sizeof(T) < Size_)
+		constexpr T& Layout() {
+			VORTEX_STATIC_ASSERT(sizeof(T) < Size_ * CHAR_BIT)
 			VORTEX_STATIC_ASSERT(std::is_trivial_v<T>)
 
 			return *reinterpret_cast<T*>(Data);
 		}
 		template<typename T>
-		inline const T& Layout() const {
-			VORTEX_STATIC_ASSERT(sizeof(T) < Size_)
+		constexpr const T& Layout() const {
+			VORTEX_STATIC_ASSERT(sizeof(T) < Size_ * CHAR_BIT)
 			VORTEX_STATIC_ASSERT(std::is_trivial_v<T>)
 			return *reinterpret_cast<const T*>(Data);
 		}

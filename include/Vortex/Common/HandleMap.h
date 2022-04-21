@@ -116,10 +116,10 @@ namespace Vortex {
 			inline Map& operator=(const Map&) = default;
 			inline Map& operator=(Map&&) noexcept = default;
 
-			template<SizeType Count = TypeRegistrySize, typename = typename std::enable_if<Count == 1>::type>
+			template<SizeType Count = TypeRegistrySize, typename = typename std::enable_if_t<Count == 1>::type>
 			inline auto& operator[](Handle handle) { return Get<TypeRegistryFirstElement>(handle); }
 
-			template<SizeType Count = TypeRegistrySize, typename = typename std::enable_if<Count == 1>::type>
+			template<SizeType Count = TypeRegistrySize, typename = typename std::enable_if_t<Count == 1>::type>
 			inline const auto& operator[](Handle handle) const { return Get<TypeRegistryFirstElement>(handle); }
 
 		public:
