@@ -8,7 +8,6 @@
 namespace Vortex::Graphics {
 	class LineRenderer {
 		struct LineMesh {
-			Vortex::Graphics::Handle MeshHandle;
 			SizeType Capacity;
 		};
 
@@ -23,12 +22,16 @@ namespace Vortex::Graphics {
 		Handle CreateLineMesh(SizeType capacity);
 		inline void Destroy(Handle line_mesh_handle) {
 			VORTEX_ASSERT(IsValid(line_mesh_handle))
-			const auto& line_mesh = m_LineMeshes[line_mesh_handle];
-			m_Renderer->DestroyMesh(line_mesh.MeshHandle);
+			const auto& line_mesh = m_LineMeshes.at(line_mesh_handle);
+			m_Renderer->DestroyMesh(line_mesh_handle);
 			m_LineMeshes.erase(line_mesh_handle);
 		}
 		inline bool IsValid(Handle line_mesh_handle) const {
 			return m_LineMeshes.find(line_mesh_handle) != m_LineMeshes.end();
+		};
+		inline SizeType GetCapacity(Handle line_mesh_handle) const {
+			VORTEX_ASSERT(IsValid(line_mesh_handle))
+			return m_LineMeshes.at(line_mesh_handle).Capacity;
 		};
 
 	public:
@@ -88,9 +91,15 @@ namespace Vortex::Graphics {
 			float label_width = 6.0f,
 			float label_height = 8.0f
 		);
-		void BakeCube(
+		void BakeCubeCentered(
 			Handle line_mesh_handle,
 			Math::Vector3 size,
+			const Math::Color& color
+		);
+		void Bake3DGrid(
+			Handle line_mesh_handle,
+			const Math::Vector3Int& grid_size,
+			const Math::Vector3& cell_size,
 			const Math::Color& color
 		);
 

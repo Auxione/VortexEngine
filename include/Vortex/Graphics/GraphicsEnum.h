@@ -1,5 +1,6 @@
 #pragma once
 #include "Vortex/Memory/Memory.h"
+#include "Vortex/Common/HashedString.h"
 
 namespace Vortex::Graphics {
 	namespace HardwareLimit {
@@ -243,62 +244,6 @@ namespace Vortex::Graphics {
 		};
 	}
 
-	namespace FrameBufferAttachment {
-		enum Enum {
-			Color0,
-			Color1,
-			Color2,
-			Color3,
-			Color4,
-			Color5,
-			Color6,
-			Color7,
-
-			ColorAttachmentCount,
-
-			Depth,
-			Stencil,
-			DepthStencil,
-
-			Count
-		};
-
-		constexpr static PixelFormat::Enum Format[]{
-			PixelFormat::RGBA_F32        //Color0
-			, PixelFormat::RGBA_F32        //Color1
-			, PixelFormat::RGBA_F32        //Color2
-			, PixelFormat::RGBA_F32        //Color3
-			, PixelFormat::RGBA_F32        //Color4
-			, PixelFormat::RGBA_F32        //Color5
-			, PixelFormat::RGBA_F32        //Color6
-			, PixelFormat::RGBA_F32        //Color7
-
-			, PixelFormat::Count        //ColorAttachmentCount
-
-			, PixelFormat::Depth_F32    //Depth
-			, PixelFormat::Stencil_UI8    //Stencil
-			, PixelFormat::DepthStencil    //DepthStencil
-
-			, PixelFormat::Count        //Count
-		};
-		constexpr static const char* ToString[]{
-			"Color0"
-			, "Color1"
-			, "Color2"
-			, "Color3"
-			, "Color4"
-			, "Color5"
-			, "Color6"
-			, "Color7"
-
-			, "ColorAttachmentCount"
-
-			, "Depth"
-			, "Stencil"
-			, "DepthStencil"
-		};
-	}
-
 	namespace ElementType {
 		enum Enum {
 			Float1 = 0,
@@ -342,7 +287,7 @@ namespace Vortex::Graphics {
 			UShort3,
 			UShort4,
 
-			IntegerTypeCount,
+			IntegralTypeCount,
 
 			Sampler1D,
 			Sampler2D,
@@ -526,26 +471,38 @@ namespace Vortex::Graphics {
 		};
 	}
 
-	namespace MeshAttribute {
+	namespace ShaderConstants {
 		enum Enum {
-			Position = 0,
-			Normal,
-			Color,
-			UV,
+			Transform = 0,
+			View,
+			Projection,
+
+			Resolution,
 
 			Count
 		};
-		constexpr ElementType::Enum ElementType[]{
-			ElementType::Float3
-			, ElementType::Float3
-			, ElementType::Float4
+		constexpr const char* ToString[]{
+			"Transform"
+			, "View"
+			, "Projection"
+
+			, "Resolution"
+		};
+		constexpr ElementType::Enum Type[]{
+			ElementType::Matrix4
+			, ElementType::Matrix4
+			, ElementType::Matrix4
+
 			, ElementType::Float2
 		};
-		constexpr const char* ToString[]{
-			"Position"
-			, "Normal"
-			, "Color"
-			, "UV"
+		constexpr HashedString ToHashedString[]{
+			"Transform"
+			, "View"
+			, "Projection"
+			, "ViewProjection"
+
+			, "Resolution"
 		};
 	}
+
 }

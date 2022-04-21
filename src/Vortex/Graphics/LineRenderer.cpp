@@ -30,23 +30,22 @@ layout(location = 1) in vec4 a_color;
 
 out vec4 vertex_color;
 
-uniform mat4 Matrix4_Projection;
-uniform mat4 Matrix4_View;
-uniform mat4 Matrix4_Transform;
+uniform mat4 Projection;
+uniform mat4 View;
+uniform mat4 Transform;
 
 void main(){
 	vertex_color = a_color;
-	gl_Position = Matrix4_Projection * Matrix4_View * Matrix4_Transform * vec4(a_position, 1.0f);
+	gl_Position = Projection * View * Transform * vec4(a_position, 1.0f);
 }
-			)", R"(
+				)", R"(
 #version 450 core
+layout(location = 0) out vec4 color;
 
 in vec4 vertex_color;
 
 void main() {
-	vec4 output_color = vertex_color;
-
-	gl_FragColor = output_color;
+	color = vertex_color;
 }
 			)"
 			};
@@ -91,15 +90,14 @@ void main() {
 			m_TotalLineCapacity = line_capacity;
 		}
 
-		Vortex::Graphics::MeshAttribute::Enum attribs[]{
-			Vortex::Graphics::MeshAttribute::Position
-			, Vortex::Graphics::MeshAttribute::Color
-		};
-
+		MeshLayout layout = CreateMeshLayout(
+			ElementType::Float3,
+			ElementType::Float4
+		);
 		auto mesh = m_Renderer->CreateMesh(
 			Vortex::Graphics::Topology::LineList,
 			Vortex::Graphics::BufferUsage::DynamicDraw,
-			attribs, Vortex::ArrayCount(attribs),
+			layout,
 			line_capacity * VertexPerLine,
 			line_capacity * IndexPerLine
 		);
@@ -107,7 +105,6 @@ void main() {
 		m_Renderer->SetMeshIndices(mesh, m_Indices.data(), line_capacity * IndexPerLine);
 
 		LineMesh line_mesh{};
-		line_mesh.MeshHandle = mesh;
 		line_mesh.Capacity = line_capacity;
 		m_LineMeshes.emplace(std::pair(mesh, line_mesh));
 		return mesh;
@@ -149,18 +146,18 @@ void main() {
 		auto index_count = m_CurrentVertexIndex * IndexPerLine;
 
 		const auto& line_mesh = m_LineMeshes[line_mesh_handle];
-		m_Renderer->SetMeshIndexCount(line_mesh.MeshHandle, index_count);
-		m_Renderer->SetMeshAttribute(
-			line_mesh.MeshHandle,
-			Vortex::Graphics::MeshAttribute::Position,
+		m_Renderer->SetMeshIndexCount(line_mesh_handle, index_count);
+		m_Renderer->SetMeshData(
+			line_mesh_handle,
+			0,
 			m_PositionBuffer.data(),
-			vertex_count
+			vertex_count * 3 * sizeof(float)
 		);
-		m_Renderer->SetMeshAttribute(
-			line_mesh.MeshHandle,
-			Vortex::Graphics::MeshAttribute::Color,
+		m_Renderer->SetMeshData(
+			line_mesh_handle,
+			1,
 			m_ColorBuffer.data(),
-			vertex_count
+			vertex_count * 4 * sizeof(float)
 		);
 	}
 
@@ -316,7 +313,7 @@ void main() {
 		const Vortex::Math::Color& color
 	) {
 		VORTEX_ASSERT(IsValid(line_mesh_handle))
-		VORTEX_ASSERT(m_LineMeshes[line_mesh_handle].Capacity >= (grid_size.x + 1) * (grid_size.y + 1))
+		VORTEX_ASSERT(m_LineMeshes[line_mesh_handle].Capacity >= static_cast<SizeType>((grid_size.x + 1) * (grid_size.y + 1)))
 
 		Begin();
 		float x_min = 0.0f;
@@ -325,17 +322,19 @@ void main() {
 		float y_min = 0.0f;
 		float y_max = static_cast<float>(grid_size.y) * cell_size.y;
 
-		for (int i = 0; i <= grid_size.x; ++i) {
-			float current_y_pos = static_cast<float>(i) * cell_size.y;
-			Vortex::Math::Vector3 begin{x_min, current_y_pos, 0.0f};
-			Vortex::Math::Vector3 end{x_max, current_y_pos, 0.0f};
-			Insert(begin, end, color);
-		}
-		for (int i = 0; i <= grid_size.y; ++i) {
+		for (int i = 0; i < grid_size.x; ++i) {
 			float current_x_pos = static_cast<float>(i) * cell_size.x;
-			Vortex::Math::Vector3 begin{current_x_pos, y_min, 0.0f};
-			Vortex::Math::Vector3 end{current_x_pos, y_max, 0.0f};
-			Insert(begin, end, color);
+
+			Vortex::Math::Vector3 y_begin{current_x_pos, y_min, 0.0f};
+			Vortex::Math::Vector3 y_end{current_x_pos, y_max, 0.0f};
+			Insert(y_begin, y_end, color);
+		}
+		for (int i = 0; i < grid_size.y; ++i) {
+			float current_y_pos = static_cast<float>(i) * cell_size.y;
+
+			Vortex::Math::Vector3 x_begin{x_min, current_y_pos, 0.0f};
+			Vortex::Math::Vector3 x_end{x_max, current_y_pos, 0.0f};
+			Insert(x_begin, x_end, color);
 		}
 		End(line_mesh_handle);
 	}
@@ -398,7 +397,7 @@ void main() {
 
 		End(line_mesh_handle);
 	}
-	void LineRenderer::BakeCube(
+	void LineRenderer::BakeCubeCentered(
 		Handle line_mesh_handle,
 		Math::Vector3 size,
 		const Math::Color& color
@@ -427,5 +426,56 @@ void main() {
 
 		End(line_mesh_handle);
 	}
+	void LineRenderer::Bake3DGrid(
+		Handle line_mesh_handle,
+		const Math::Vector3Int& grid_size,
+		const Math::Vector3& cell_size,
+		const Math::Color& color
+	) {
+		VORTEX_ASSERT(IsValid(line_mesh_handle))
+		VORTEX_ASSERT(m_LineMeshes[line_mesh_handle].Capacity >= static_cast<SizeType>((grid_size.x + 1) * (grid_size.y + 1) * (grid_size.z + 1)))
 
+		float x_min = 0.0f;
+		float x_max = static_cast<float>(grid_size.x) * cell_size.x;
+
+		float y_min = 0.0f;
+		float y_max = static_cast<float>(grid_size.y) * cell_size.y;
+
+		float z_min = 0.0f;
+		float z_max = static_cast<float>(grid_size.z) * cell_size.z;
+
+		Begin();
+		for (int i = 0; i <= grid_size.x; ++i) {
+			float current_x_pos = static_cast<float>(i) * cell_size.x;
+			for (int j = 0; j <= grid_size.y; ++j) {
+				float current_y_pos = static_cast<float>(j) * cell_size.y;
+
+				Vortex::Math::Vector3 begin{current_x_pos, current_y_pos, z_min};
+				Vortex::Math::Vector3 end{current_x_pos, current_y_pos, z_max};
+				Insert(begin, end, color);
+			}
+		}
+		for (int i = 0; i <= grid_size.x; ++i) {
+			float current_x_pos = static_cast<float>(i) * cell_size.x;
+			for (int j = 0; j <= grid_size.z; ++j) {
+				float current_z_pos = static_cast<float>(j) * cell_size.z;
+
+				Vortex::Math::Vector3 begin{current_x_pos, y_min, current_z_pos};
+				Vortex::Math::Vector3 end{current_x_pos, y_max, current_z_pos};
+				Insert(begin, end, color);
+			}
+		}
+		for (int i = 0; i <= grid_size.z; ++i) {
+			float current_z_pos = static_cast<float>(i) * cell_size.z;
+			for (int j = 0; j <= grid_size.y; ++j) {
+				float current_y_pos = static_cast<float>(j) * cell_size.y;
+
+				Vortex::Math::Vector3 begin{x_min, current_y_pos, current_z_pos};
+				Vortex::Math::Vector3 end{x_max, current_y_pos, current_z_pos};
+				Insert(begin, end, color);
+			}
+		}
+
+		End(line_mesh_handle);
+	}
 }
