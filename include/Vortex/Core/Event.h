@@ -24,11 +24,12 @@ namespace Vortex {
 
 			WindowResize,
 			WindowPathDrop,
+			WindowFocusLost,
+			WindowFocusGain,
+			WindowClose,
 
 			WindowType,
 
-			ApplicationFocusLost,
-			ApplicationFocusGain,
 			ApplicationClose,
 
 			ApplicationType
@@ -51,11 +52,12 @@ namespace Vortex {
 
 			, "WindowResize"
 			, "WindowPathDrop"
+			, "WindowFocusLost"
+			, "WindowFocusGain"
+			, "WindowClose"
 
 			, "WindowType"
 
-			, "ApplicationFocusLost"
-			, "ApplicationFocusGain"
 			, "ApplicationClose"
 
 			, "ApplicationType"
@@ -75,13 +77,23 @@ namespace Vortex {
 			KeyCode::Enum Keycode;
 			UInt16 Character;
 			MouseButton::Enum Button;
-			Vector2 Position;
-			Vector2Int Size;
+			Math::Vector2 Position;
 
 			struct {
+				UInt16 Handle;
+				Math::Vector2Int Size;
+			} WindowResize;
+			struct {
+				UInt16 Handle;
 				SizeType Count;
 				const char** Paths;
-			} PathDrop;
+			} WindowPathDrop;
+			struct {
+				UInt16 Handle;
+			} WindowFocus;
+			struct {
+				UInt16 Handle;
+			} WindowClose;
 		};
 
 		inline static Event CreateKeyPress(KeyCode::Enum keycode) {
@@ -132,30 +144,41 @@ namespace Vortex {
 			return event;
 		}
 
-		inline static Event CreateWindowResize(Int32 width, Int32 height) {
+		inline static Event CreateWindowResize(UInt16 Handle, Int32 width, Int32 height) {
 			Event event{EventType::WindowResize};
-			event.Size[0] = width;
-			event.Size[1] = height;
+			event.WindowResize.Handle = Handle;
+			event.WindowResize.Size[0] = width;
+			event.WindowResize.Size[1] = height;
 			return event;
 		}
-		inline static Event CreateWindowPathDrop(std::size_t count, const char** paths) {
+		inline static Event CreateWindowPathDrop(UInt16 Handle, std::size_t count, const char** paths) {
 			Event event{EventType::WindowPathDrop};
-			event.PathDrop.Count = count;
-			event.PathDrop.Paths = paths;
+			event.WindowPathDrop.Handle = Handle;
+			event.WindowPathDrop.Count = count;
+			event.WindowPathDrop.Paths = paths;
+			return event;
+		}
+		inline static Event CreateWindowClose(UInt16 handle) {
+			Event event{EventType::WindowClose};
+			event.WindowClose.Handle = handle;
+			return event;
+		}
+		inline static Event CreateWindowFocusGain(UInt16 handle) {
+			Event event{EventType::WindowFocusGain};
+			event.WindowFocus.Handle = handle;
+			return event;
+		}
+		inline static Event CreateWindowFocusLost(UInt16 handle) {
+			Event event{EventType::WindowFocusLost};
+			event.WindowFocus.Handle = handle;
 			return event;
 		}
 
-		inline static Event CreateApplicationFocusGain() {
-			return Event{EventType::ApplicationFocusGain};
-		}
-		inline static Event CreateApplicationFocusLost() {
-			return Event{EventType::ApplicationFocusLost};
-		}
 		inline static Event CreateApplicationClose() {
 			return Event{EventType::ApplicationClose};
 		}
 	};
 
-	typedef void(* EventCallbackFn)(const Event&);
+	using EventCallbackFn = void (*)(const Event&);
 	//using PushEventFn = void(Event);
 }
